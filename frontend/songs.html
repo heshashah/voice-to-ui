@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Songs</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      background-color: #DDAF8C;
+      font-family: 'Segoe UI', sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .container {
+      background-color: #FDF1D4;
+      border-radius: 40px;
+      width: 95%;
+      height: 95%;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .wave-top, .wave-bottom {
+      position: absolute;
+      width: 200%;
+      height: 200px;
+      background: linear-gradient(to right, #FCD34D, #EBA85D, #FCD34D);
+      border-radius: 100%;
+      opacity: 0.7;
+      animation: floatWave 6s ease-in-out infinite alternate;
+      z-index: 0;
+    }
+    .wave-top {
+      top: -80px;
+      left: -100px;
+      transform: rotate(15deg);
+    }
+    .wave-bottom {
+      bottom: -100px;
+      right: -100px;
+      transform: rotate(-15deg);
+    }
+    @keyframes floatWave {
+      0% { transform: translateY(0) rotate(15deg); }
+      100% { transform: translateY(-10px) rotate(15deg); }
+    }
+    .navbar {
+      position: relative;
+      z-index: 2;
+      width: 100%;
+      display: flex;
+      justify-content: space-around;
+      padding: 1rem 0;
+      font-weight: bold;
+      color: #6B3E2E;
+    }
+    .navbar a {
+      text-decoration: none;
+      color: #6B3E2E;
+      padding: 0.5rem;
+      transition: color 0.3s ease;
+    }
+    .navbar a:hover {
+      color: #B16D50;
+    }
+    .logo {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+      margin-top: 4rem;
+    }
+    .logo h1 {
+      font-size: 3rem;
+      font-weight: bold;
+      color: #B16D50;
+      font-family: 'Courier New', Courier, monospace;
+    }
+    .player {
+      z-index: 1;
+      margin-top: 4rem;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      color: #4B3D33;
+    }
+    .record {
+      width: 150px;
+      height: 150px;
+      background-color: #4A3F36;
+      border-radius: 50%;
+      border: 10px solid #D8C1A1;
+      position: relative;
+    }
+    .record::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 25px;
+      height: 25px;
+      background-color: #BCA58C;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+    }
+    .title {
+      margin-top: 1.5rem;
+      font-size: 1.25rem;
+      font-weight: bold;
+    }
+    .artist {
+      font-size: 0.9rem;
+      color: #9D8570;
+    }
+    .progress {
+      margin-top: 1.5rem;
+      width: 80%;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.75rem;
+    }
+    .controls {
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      margin-top: 1.5rem;
+      width: 80%;
+    }
+    .controls svg {
+      width: 28px;
+      height: 28px;
+      color: #6B3E2E;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    .controls svg:hover {
+      transform: scale(1.1);
+      color: #B16D50;
+    }
+    .mic-container {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+    }
+    .status-box {
+      background-color: rgba(0, 0, 0, 0.6);
+      color: white;
+      border-radius: 0.75rem;
+      padding: 1rem;
+      margin-bottom: 0.5rem;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .status-box.visible {
+      opacity: 1;
+    }
+    .mic-button.listening {
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+      70% { box-shadow: 0 0 0 25px rgba(239, 68, 68, 0); }
+    }
+    #breathing-box {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.6);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+    }
+    #breathing-box.show {
+      display: flex;
+    }
+    #breathing-text {
+      font-size: 3rem;
+      color: white;
+      animation: pulse 4s infinite;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div class="wave-top"></div>
+    <div class="wave-bottom"></div>
+
+    <nav class="navbar">
+      <a href="home.html">Home</a>
+      <a href="games/dino.html">Games</a>
+      <a href="calendar.html">Calendar</a>
+      <a href="settings.html">Settings</a>
+    </nav>
+
+    <div class="logo">
+      <h1>Songs 🎶</h1>
+    </div>
+
+    <div class="player">
+      <audio id="audio" src="games/assets/audio/Lover.mp3" preload="auto"></audio>
+      <div class="record"></div>
+      <p class="mt-3 text-sm text-gray-500">Hesha's playlist</p>
+      <div class="title">Lover</div>
+      <div class="artist">Taylor Swift</div>
+      <div class="progress">
+        <span id="start-time">00:00</span>
+        <svg viewBox="0 0 200 30" class="w-[60%] h-6">
+          <path d="M0 15 Q 10 5, 20 15 T 200 15" fill="none" stroke="#EBA85D" stroke-width="3" stroke-linecap="round" />
+          <circle id="wave-dot" cx="0" cy="15" r="5" fill="#EBA85D" />
+        </svg>
+        <span id="end-time">03:42</span>
+      </div>
+      <div class="controls">
+        <svg><path d="M10 2a8 8 0 100 16 8 8 0 000-16zm-1 11H7v-2h2v2zm4 0h-2v-2h2v2z" /></svg>
+        <svg><path d="M13 10L7 6v8l6-4z" /></svg>
+        <svg id="play-toggle"><path d="M8 5v10l7-5-7-5z" /></svg>
+        <svg><path d="M17 10l-6 4V6l6 4z" /></svg>
+        <svg><path d="M9 7h1v6H9V7zm3 0h1v6h-1V7z" /></svg>
+      </div>
+    </div>
+
+    <div id="breathing-box">
+      <div id="breathing-text">Breathe In...</div>
+    </div>
+
+    <div class="mic-container">
+      <div id="status-display" class="status-box">
+        <p id="status" class="font-semibold">Listening...</p>
+        <p id="command-output" class="text-pink-400 text-sm mt-1">-</p>
+      </div>
+      <button id="mic-button" class="mic-button bg-red-500 hover:bg-red-600 text-white w-16 h-16 rounded-full shadow-lg flex items-center justify-center">
+        <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
+          <path d="M7 4a3 3 0 016 0v6a3 3 0 11-6 0V4z" />
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <script>
+    const socket = io();
+    const micButton = document.getElementById('mic-button');
+    const statusBox = document.getElementById('status-display');
+    const statusText = document.getElementById('status');
+    const output = document.getElementById('command-output');
+    const breathingBox = document.getElementById('breathing-box');
+    const breathingText = document.getElementById('breathing-text');
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    let recognition, isListening = false;
+
+    if (SpeechRecognition) {
+      recognition = new SpeechRecognition();
+      recognition.lang = 'en-US';
+
+      recognition.onstart = () => {
+        isListening = true;
+        micButton.classList.add('listening');
+        statusBox.classList.add('visible');
+        statusText.textContent = 'Listening...';
+      };
+
+      recognition.onend = () => {
+        isListening = false;
+        micButton.classList.remove('listening');
+        statusBox.classList.remove('visible');
+      };
+
+      recognition.onresult = (e) => {
+        const command = e.results[0][0].transcript.trim().toLowerCase();
+        output.textContent = `"${command}"`;
+        socket.emit('voice-command', command);
+      };
+
+      recognition.onerror = (e) => {
+        output.textContent = `Error: ${e.error}`;
+      };
+    } else {
+      micButton.style.display = 'none';
+      alert('Speech Recognition not supported');
+    }
+
+    micButton.addEventListener('click', () => {
+      if (!recognition) return;
+      isListening ? recognition.stop() : recognition.start();
+    });
+
+    const audio = document.getElementById("audio");
+    const playBtn = document.querySelectorAll(".controls svg")[2];
+    const waveDot = document.getElementById("wave-dot");
+    const startTime = document.getElementById("start-time");
+    const endTime = document.getElementById("end-time");
+
+    function formatTime(s) {
+      const m = Math.floor(s / 60).toString().padStart(2, '0');
+      const sec = Math.floor(s % 60).toString().padStart(2, '0');
+      return `${m}:${sec}`;
+    }
+
+    audio.onloadedmetadata = () => {
+      endTime.textContent = formatTime(audio.duration);
+    };
+
+    playBtn.addEventListener("click", () => {
+      if (audio.paused) audio.play();
+      else audio.pause();
+    });
+
+    audio.ontimeupdate = () => {
+      const percent = audio.currentTime / audio.duration;
+      const newX = percent * 200;
+      waveDot.setAttribute("cx", newX);
+      startTime.textContent = formatTime(audio.currentTime);
+    };
+
+    socket.on('execute-action', ({ type, payload }) => {
+      if (type === 'REDIRECT') {
+        window.location.href = payload.url;
+      } else if (type === 'GO_BACK') {
+        window.history.back();
+      } else if (type === 'PLAY_SONG') {
+        if (payload.file) {
+          audio.src = payload.file;
+          audio.play();
+          document.querySelector('.title').textContent = payload.file.split('/').pop().replace('.mp3', '');
+        }
+      } else if (type === 'START_BREATHING') {
+        breathingBox.classList.add('show');
+        const steps = ['Breathe In...', 'Hold...', 'Breathe Out...'];
+        let step = 0;
+        function nextStep() {
+          if (step < steps.length) {
+            breathingText.textContent = steps[step];
+            step++;
+            setTimeout(nextStep, 4000);
+          } else {
+            breathingBox.classList.remove('show');
+          }
+        }
+        nextStep();
+      }
+    });
+
+    socket.on('feedback', ({ message }) => {
+      statusBox.classList.add('visible');
+      statusText.textContent = 'Notice';
+      output.textContent = message;
+      setTimeout(() => statusBox.classList.remove('visible'), 3000);
+    });
+  </script>
+</body>
+</html>

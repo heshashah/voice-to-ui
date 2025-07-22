@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Mood History</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      background-color: #DDAF8C;
+      font-family: 'Segoe UI', sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    .container {
+      background-color: #FDF1D4;
+      border-radius: 40px;
+      width: 95%;
+      height: 95%;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem;
+    }
+
+    .wave-top,
+    .wave-bottom {
+      position: absolute;
+      width: 200%;
+      height: 200px;
+      background: linear-gradient(to right, #FCD34D, #EBA85D, #FCD34D);
+      border-radius: 100%;
+      opacity: 0.7;
+      animation: floatWave 6s ease-in-out infinite alternate;
+      z-index: 0;
+    }
+
+    .wave-top {
+      top: -80px;
+      left: -100px;
+      transform: rotate(15deg);
+    }
+
+    .wave-bottom {
+      bottom: -100px;
+      right: -100px;
+      transform: rotate(-15deg);
+    }
+
+    @keyframes floatWave {
+      0% {
+        transform: translateY(0) rotate(15deg);
+      }
+
+      100% {
+        transform: translateY(-10px) rotate(15deg);
+      }
+    }
+
+    .logo {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+      margin-top: 4rem;
+    }
+
+    .logo h1 {
+      font-size: 3rem;
+      font-weight: bold;
+      letter-spacing: 2px;
+      color: #B16D50;
+      font-family: 'Courier New', Courier, monospace;
+    }
+
+    .navbar {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      display: flex;
+      justify-content: space-around;
+      padding: 1rem 0;
+      font-weight: bold;
+      color: #6B3E2E;
+    }
+
+    .navbar a {
+      text-decoration: none;
+      color: #6B3E2E;
+      padding: 0.5rem;
+      transition: color 0.3s ease;
+    }
+
+    .navbar a:hover {
+      color: #B16D50;
+    }
+
+    .mic-container {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+    }
+
+    .status-box {
+      background-color: rgba(0, 0, 0, 0.6);
+      color: white;
+      border-radius: 0.75rem;
+      padding: 1rem;
+      margin-bottom: 0.5rem;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .status-box.visible {
+      opacity: 1;
+    }
+
+    .mic-button.listening {
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+      }
+
+      70% {
+        box-shadow: 0 0 0 25px rgba(239, 68, 68, 0);
+      }
+    }
+
+    .mood-box {
+      z-index: 1;
+      width: 100%;
+      max-height: 500px;
+      overflow-y: auto;
+      margin-top: 1rem;
+      padding: 1rem;
+      background-color: white;
+      border-radius: 1rem;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .mood-entry {
+      border-bottom: 1px solid #F3D9C1;
+      padding: 0.75rem 0;
+    }
+
+    .mood-entry:last-child {
+      border-bottom: none;
+    }
+
+    .chat-btn {
+      background-color: #10b981;
+      color: white;
+      font-size: 0.75rem;
+      padding: 0.25rem 0.75rem;
+      border-radius: 0.5rem;
+      margin-top: 0.5rem;
+      cursor: pointer;
+    }
+
+    /* Chat Modal */
+    .chat-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 50;
+    }
+
+    .chat-box {
+      background: #fff;
+      width: 90%;
+      max-width: 500px;
+      padding: 1rem;
+      border-radius: 1rem;
+      max-height: 80%;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .chat-log {
+      flex-grow: 1;
+      overflow-y: auto;
+      margin-bottom: 0.5rem;
+      padding: 0.5rem;
+      border: 1px solid #ccc;
+      border-radius: 0.5rem;
+    }
+
+    .chat-log p {
+      margin: 0.25rem 0;
+    }
+
+    .chat-input {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .chat-input input {
+      flex-grow: 1;
+      padding: 0.5rem;
+      border: 1px solid #ccc;
+      border-radius: 0.5rem;
+    }
+
+    .chat-input button {
+      background-color: #f97316;
+      color: white;
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: 0.5rem;
+      cursor: pointer;
+    }
+
+    .dark-mode {
+      background-color: #1F2937;
+      color: #F9FAFB;
+    }
+
+    .dark-mode .container {
+      background-color: #374151;
+    }
+
+    .dark-mode .mood-box {
+      background-color: #4B5563;
+      color: white;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div class="wave-top"></div>
+    <div class="wave-bottom"></div>
+
+    <nav class="navbar">
+      <a href="home.html">Home</a>
+      <a href="games/dino.html">Games</a>
+      <a href="songs.html">Songs</a>
+      <a href="calendar.html">Calendar</a>
+    </nav>
+
+    <div class="logo">
+      <h1 class="text-orange-500 font-semibold">Mood History🧠</h1>
+    </div>
+
+    <div id="moodList" class="mood-box"></div>
+
+    <div class="mic-container">
+      <div id="status-display" class="status-box">
+        <p id="status" class="font-semibold">Listening...</p>
+        <p id="command-output" class="text-pink-400 text-sm mt-1">-</p>
+      </div>
+      <button id="mic-button"
+        class="mic-button bg-red-500 hover:bg-red-600 text-white w-16 h-16 rounded-full shadow-lg flex items-center justify-center">
+        <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
+          <path d="M7 4a3 3 0 016 0v6a3 3 0 11-6 0V4z" />
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Chatbot Modal -->
+  <div id="chatModal" class="chat-modal">
+    <div class="chat-box">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h2 class="text-lg font-semibold">🧠 Talk to ME!</h2>
+        <button onclick="closeChat()" class="text-red-500 font-bold text-xl">&times;</button>
+      </div>
+      <div id="chatLog" class="chat-log"></div>
+      <div class="chat-input">
+        <input type="text" id="chatInput" placeholder="Type how you're feeling...">
+        <button onclick="startVoiceInput()">🎤 Speak</button>
+        <button onclick="sendChat()">Send</button>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    const socket = io();
+    const micButton = document.getElementById('mic-button');
+    const statusBox = document.getElementById('status-display');
+    const status = document.getElementById('status');
+    const output = document.getElementById('command-output');
+    const moodList = document.getElementById("moodList");
+
+    const chatModal = document.getElementById("chatModal");
+    const chatLog = document.getElementById("chatLog");
+    let selectedMood = "";
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    let recognition, isListening = false;
+
+    if (SpeechRecognition) {
+      recognition = new SpeechRecognition();
+      recognition.lang = 'en-US';
+      recognition.continuous = false;
+
+      recognition.onstart = () => {
+        isListening = true;
+        micButton.classList.add('listening');
+        statusBox.classList.add('visible');
+        status.textContent = 'Listening...';
+      };
+
+      recognition.onend = () => {
+        isListening = false;
+        micButton.classList.remove('listening');
+        statusBox.classList.remove('visible');
+      };
+
+      recognition.onresult = (e) => {
+        const command = e.results[0][0].transcript.trim().toLowerCase();
+        output.textContent = command;
+        socket.emit('voice-command', command);
+      };
+
+      recognition.onerror = (e) => {
+        output.textContent = `Error: ${e.error}`;
+      };
+    }
+
+    micButton.addEventListener('click', () => {
+      if (!recognition) return;
+      isListening ? recognition.stop() : recognition.start();
+    });
+
+    socket.on('feedback', ({ message }) => {
+      statusBox.classList.add('visible');
+      status.textContent = 'Notice';
+      output.textContent = message;
+      setTimeout(() => statusBox.classList.remove('visible'), 3000);
+    });
+
+    socket.on('execute-action', ({ type, payload }) => {
+      if (type === 'REDIRECT') {
+        window.location.href = payload.url;
+      } else if (type === 'GO_BACK') {
+        window.history.back();
+      }
+    });
+
+    // Load Mood Entries
+    socket.emit('get-week-moods');
+
+    socket.on('week-moods', (rows) => {
+      moodList.innerHTML = "";
+
+      if (!rows.length) {
+        moodList.innerHTML = `<p class="text-center text-gray-500">📭 No moods logged this week.</p>`;
+      } else {
+        rows.forEach(({ mood, timestamp }, i) => {
+          const div = document.createElement('div');
+          div.className = "mood-entry";
+          div.innerHTML = `
+          <p class="font-semibold text-orange-700">${i + 1}. ${mood}</p>
+          <p class="text-sm text-gray-500">🕒 ${new Date(timestamp).toLocaleString()}</p>
+          <button class="chat-btn" onclick="openChat('${mood}')">Chat 💬</button>
+        `;
+          moodList.appendChild(div);
+        });
+      }
+    });
+
+    function openChat(mood) {
+      selectedMood = mood;
+      chatLog.innerHTML = `
+      <p><strong>You:</strong> I feel ${mood}</p>
+      <p><strong>Bot:</strong> I'm here with you. Want to talk more about it?</p>
+    `;
+      chatModal.style.display = "flex";
+    }
+
+    function closeChat() {
+      chatModal.style.display = "none";
+      document.getElementById("chatInput").value = "";
+    }
+
+    function sendChat() {
+      const input = document.getElementById("chatInput");
+      const message = input.value.trim();
+      if (!message) return;
+
+      chatLog.innerHTML += `<p><strong>You:</strong> ${message}</p>`;
+      const reply = getBotReply(message);
+      chatLog.innerHTML += `<p><strong>Bot:</strong> ${reply}</p>`;
+      input.value = "";
+      chatLog.scrollTop = chatLog.scrollHeight;
+    }
+
+    function getBotReply(msg) {
+      const m = msg.toLowerCase();
+
+      if (m.includes('anxious') || m.includes('nervous')) {
+        return "I'm here with you. Want to talk more about it?";
+      }
+
+      if (m.includes('overwhelmed') || m.includes('stressed')) {
+        return "Thanks for sharing. Would you like some ideas to feel better?";
+      }
+
+      if (['yes', 'sure', 'okay', 'yes please'].includes(m)) {
+        return `Here are a few things you can try:<br>
+        • 🧘 Try a 3-minute breathing exercise<br>
+        • 🎶 Listen to relaxing music<br>
+        • ✍️ Write your thoughts in a private journal<br>
+        • 🚶‍♂️ Take a short walk outside to clear your mind<br>
+        • 🎮 Play a game to distract your mind → <a href="frontend/games/dino.html">Dino Game</a><br>
+        • ☎️ Call a loved one`;
+      }
+
+      if (m.includes('happy') || m.includes('great')) {
+        return "That's awesome! Keep riding that wave of joy! 😊";
+      }
+
+      if (m.includes('sad') || m.includes('lonely') || m.includes('down')) {
+        return "You're not alone. Would you like me to suggest something uplifting?";
+      }
+
+      return "Thanks for telling me. Would you like me to help you feel better?";
+    }
+
+    // Voice Input
+    let voiceInputRecognizer;
+
+    function startVoiceInput() {
+      const chatInput = document.getElementById("chatInput");
+
+      if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+        alert("Your browser doesn't support speech recognition.");
+        return;
+      }
+
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      voiceInputRecognizer = new SpeechRecognition();
+      voiceInputRecognizer.lang = 'en-US';
+      voiceInputRecognizer.continuous = false;
+      voiceInputRecognizer.interimResults = false;
+
+      voiceInputRecognizer.onstart = () => {
+        chatInput.placeholder = "Listening...";
+      };
+
+      voiceInputRecognizer.onerror = (e) => {
+        console.error("Voice recognition error:", e.error);
+        chatInput.placeholder = "Type how you're feeling...";
+      };
+
+      voiceInputRecognizer.onresult = (event) => {
+        const transcript = event.results[0][0].transcript.trim();
+        chatInput.value = transcript;
+        chatInput.placeholder = "Type how you're feeling...";
+      };
+
+      voiceInputRecognizer.onend = () => {
+        chatInput.placeholder = "Type how you're feeling...";
+      };
+
+      voiceInputRecognizer.start();
+    }
+
+  </script>
+
+</body>
+
+</html>

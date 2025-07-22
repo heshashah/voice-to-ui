@@ -1,0 +1,149 @@
+/* General Reset */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', sans-serif;
+  background: linear-gradient(to bottom, #1e1e1e, #121212);
+  color: white;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2rem;
+}
+
+/* Logo */
+header {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #1db954;
+  margin-bottom: 1.5rem;
+}
+
+/* Search Bar */
+.search-container {
+  width: 100%;
+  max-width: 600px;
+  display: flex;
+  margin-bottom: 2rem;
+}
+
+#search-input {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  border: none;
+  border-radius: 20px 0 0 20px;
+  font-size: 1rem;
+}
+
+#search-button {
+  background-color: #1db954;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  color: white;
+  font-weight: bold;
+  border-radius: 0 20px 20px 0;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+#search-button:hover {
+  background-color: #17a34a;
+}
+
+/* Track List */
+.track-list {
+  width: 100%;
+  max-width: 600px;
+  margin-top: 1rem;
+}
+
+.track {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1rem;
+  background-color: #2a2a2a;
+  padding: 0.75rem;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.track:hover {
+  background-color: #333;
+}
+
+.track img {
+  width: 60px;
+  height: 60px;
+  border-radius: 8px;
+  margin-right: 1rem;
+}
+
+.track-info {
+  flex-grow: 1;
+}
+
+.track-info h4 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.track-info p {
+  font-size: 0.85rem;
+  color: #bbb;
+}
+
+/* Player */
+#player {
+  position: fixed;
+  bottom: 0;
+  background-color: #121212;
+  width: 100%;
+  max-width: 600px;
+  padding: 1rem;
+  text-align: center;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.5);
+}
+
+/* Mic */
+.mic-container {
+  position: fixed;
+  bottom: 100px;
+  right: 20px;
+}
+
+#mic-button {
+  background-color: #1db954;
+  border: none;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#mic-button svg {
+  fill: white;
+  width: 24px;
+  height: 24px;
+}
+
+#mic-button.listening {
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(29, 185, 84, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 25px rgba(29, 185, 84, 0);
+  }
+}
