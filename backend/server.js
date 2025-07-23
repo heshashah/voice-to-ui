@@ -204,6 +204,17 @@ io.on('connection', (socket) => {
       socket.emit('execute-action', { type: 'REDIRECT', payload: { url: 'home.html' } });
       return;
     }
+    if (cmd.includes('go back') || cmd.includes('previous page')) {
+      socket.emit('execute-action', { type: 'GO_BACK' });
+      return;
+    }
+    if (cmd.includes('play lover')) {
+      socket.emit('execute-action', {
+        type: 'REDIRECT',
+        payload: { url: 'songs/lover.html' } // Or the correct path
+      });
+      return;
+    }
 
     // ❓ Unknown
     socket.emit('feedback', { message: `❓ Unknown command: "${command}"` });
@@ -266,3 +277,19 @@ app.get('/', (req, res) => {
 server.listen(PORT, () => {
   console.log(`🚀 Server running at http://localhost:${PORT}`);
 });
+
+// ===================== MOOD LOGGING API =====================
+app.post("/api/mood", (req, res) => {
+  const { userId, mood, date } = req.body;
+
+  const sql = `INSERT INTO mood_entries (user_id, mood, date) VALUES (?, ?, ?)`;
+  db.run(sql, [userId, mood, date], function (err) {
+    if (err) {
+      return res.status(500).json({ success: false, message: err.message });
+    }
+    res.json({ success: true, moodId: this.lastID });
+  });
+});
+
+
+

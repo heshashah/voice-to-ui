@@ -201,6 +201,14 @@
           alert("Login failed");
         }
       });
+    socket.on('execute-action', (action) => {
+      if (action.type === 'REDIRECT') {
+        window.location.href = action.payload.url;
+      } else if (action.type === 'GO_BACK') {
+        window.history.back();
+      }
+    });
+
   </script>
 </body>
 

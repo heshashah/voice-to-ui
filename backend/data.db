@@ -1,0 +1,6 @@
+CREATE TABLE mood_entries (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id TEXT NOT NULL,
+  mood TEXT NOT NULL,
+  date TEXT NOT NULL  -- Format: YYYY-MM-DD
+);

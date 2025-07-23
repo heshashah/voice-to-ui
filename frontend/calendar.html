@@ -203,6 +203,15 @@
       });
       calendar.render();
 
+      function getMoodColor(mood) {
+        switch (mood.toLowerCase()) {
+          case 'happy': return 'lightgreen';
+          case 'sad': return 'lightblue';
+          case 'angry': return 'lightcoral';
+          default: return 'lightgray';
+        }
+      }
+
       // 🔄 Fetch events from database on load
       socket.emit('get-calendar-events');
     });
@@ -294,7 +303,7 @@
       setTimeout(() => statusBox.classList.remove('visible'), 3000);
     });
   </script>
-  
+
 </body>
 
 </html>
