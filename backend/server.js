@@ -5,10 +5,9 @@ const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
 const cors = require('cors');
-const db = require('./db'); // SQLite DB connection
+const mysql = require('mysql2');
 const OpenAI = require('openai');
 const bcrypt = require('bcrypt');
-const sqlite3 = require('sqlite3').verbose();
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const app = express();
@@ -22,6 +21,43 @@ app.use(express.static(path.join(__dirname, '..', 'frontend')));
 app.use('/assets', express.static(path.join(__dirname, '..', 'frontend/assets')));
 app.use('/games/assets', express.static(path.join(__dirname, '..', 'frontend/games/assets')));
 
+// ✅ MySQL connection
+const db = mysql.createConnection({
+  host: process.env.DB_HOST || 'localhost',
+  user: process.env.DB_USER || 'root',
+  password: process.env.DB_PASSWORD || '',
+  database: process.env.DB_NAME || 'voice_control_app'
+});
+
+db.connect((err) => {
+  if (err) console.error('❌ MySQL connection failed:', err);
+  else console.log('✅ Connected to MySQL database');
+});
+
+// ✅ Create tables if not exists
+db.query(`
+  CREATE TABLE IF NOT EXISTS mood_logs (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    mood VARCHAR(100) NOT NULL,
+    date DATE NOT NULL
+  )
+`);
+db.query(`
+  CREATE TABLE IF NOT EXISTS calendar_events (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    date DATE NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  )
+`);
+db.query(`
+  CREATE TABLE IF NOT EXISTS users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(255) UNIQUE,
+    password VARCHAR(255) NOT NULL
+  )
+`);
+
 const monthMap = {
   january: '01', february: '02', march: '03', april: '04',
   may: '05', june: '06', july: '07', august: '08',
@@ -34,10 +70,8 @@ function parseEventCommand(command) {
   const [, monthName, day, title] = match;
   const month = monthMap[monthName.toLowerCase()];
   if (!month) return null;
-
   const currentYear = new Date().getFullYear();
-  const date = `${currentYear}-${month}-${String(day).padStart(2, '0')}`;
-  return { title: title.trim(), date };
+  return { title: title.trim(), date: `${currentYear}-${month}-${String(day).padStart(2, '0')}` };
 }
 
 function parseClearCommand(command) {
@@ -46,10 +80,8 @@ function parseClearCommand(command) {
   const [, monthName, day] = match;
   const month = monthMap[monthName.toLowerCase()];
   if (!month) return null;
-
   const currentYear = new Date().getFullYear();
-  const date = `${currentYear}-${month}-${String(day).padStart(2, '0')}`;
-  return { date };
+  return { date: `${currentYear}-${month}-${String(day).padStart(2, '0')}` };
 }
 
 // ===================== SOCKET =====================
@@ -59,27 +91,15 @@ io.on('connection', (socket) => {
   socket.on('voice-command', (command) => {
     const cmd = command.toLowerCase().trim();
 
-    // === Mood Logging ===
+    // === ✅ Mood Logging ===
     const moodMatch = cmd.match(/^i feel (.+)/);
     if (moodMatch) {
       const mood = moodMatch[1];
-      const timestamp = new Date().toISOString();
+      const date = new Date().toISOString().split('T')[0];
 
-      db.run(`INSERT INTO moods (mood, timestamp) VALUES (?, ?)`, [mood, timestamp], (err) => {
-        if (err) {
-          socket.emit('feedback', { message: '❌ Error logging mood.' });
-        } else {
-          socket.emit('feedback', {
-            message: `🧠 Logged your mood: "${mood}" at ${new Date(timestamp).toLocaleString()}`
-          });
-
-          if (['sad', 'anxious'].includes(mood.trim())) {
-            const date = timestamp.split('T')[0];
-            const title = `Felt ${mood}`;
-            db.run(`INSERT INTO calendar_events (title, date, created_at) VALUES (?, ?, ?)`, [title, date, timestamp]);
-            socket.emit('execute-action', { type: 'ADD_EVENT', payload: { title, date } });
-          }
-        }
+      db.query(`INSERT INTO mood_logs (mood, date) VALUES (?, ?)`, [mood, date], (err) => {
+        if (err) socket.emit('feedback', { message: '❌ Error logging mood.' });
+        else socket.emit('feedback', { message: `🧠 Logged your mood: "${mood}" on ${date}` });
       });
       return;
     }
@@ -88,16 +108,8 @@ io.on('connection', (socket) => {
     if (cmd.startsWith('mark')) {
       const event = parseEventCommand(cmd);
       if (event) {
-        db.run(`INSERT INTO calendar_events (title, date, created_at) VALUES (?, ?, ?)`,
-          [event.title, event.date, new Date().toISOString()],
-          (err) => {
-            if (err) console.error('❌ Failed to save calendar event:', err);
-          }
-        );
-        socket.emit('execute-action', {
-          type: 'ADD_EVENT',
-          payload: event
-        });
+        db.query(`INSERT INTO calendar_events (title, date) VALUES (?, ?)`, [event.title, event.date]);
+        socket.emit('execute-action', { type: 'ADD_EVENT', payload: event });
       } else {
         socket.emit('feedback', { message: `❌ Could not parse event: "${command}"` });
       }
@@ -108,13 +120,8 @@ io.on('connection', (socket) => {
     if (cmd.startsWith('clear')) {
       const result = parseClearCommand(cmd);
       if (result) {
-        db.run(`DELETE FROM calendar_events WHERE date = ?`, [result.date], (err) => {
-          if (err) console.error('❌ Failed to delete calendar events:', err);
-        });
-        socket.emit('execute-action', {
-          type: 'CLEAR_EVENTS',
-          payload: result
-        });
+        db.query(`DELETE FROM calendar_events WHERE date = ?`, [result.date]);
+        socket.emit('execute-action', { type: 'CLEAR_EVENTS', payload: result });
       } else {
         socket.emit('feedback', { message: `❌ Could not understand date to clear: "${command}"` });
       }
@@ -124,102 +131,36 @@ io.on('connection', (socket) => {
     // 🎵 Music
     if (cmd.startsWith('play')) {
       const songName = cmd.replace('play', '').trim().toLowerCase();
-      const songMap = {
-        'lover': 'games/assets/audio/Lover.mp3'
-      };
+      const songMap = { 'lover': 'games/assets/audio/Lover.mp3' };
       const songPath = songMap[songName];
-      if (songPath) {
-        socket.emit('execute-action', {
-          type: 'PLAY_SONG',
-          payload: { file: songPath }
-        });
-      } else {
-        socket.emit('feedback', { message: `❌ Song "${songName}" not found.` });
-      }
+      if (songPath) socket.emit('execute-action', { type: 'PLAY_SONG', payload: { file: songPath } });
+      else socket.emit('feedback', { message: `❌ Song "${songName}" not found.` });
       return;
     }
-    else if (command.includes("play song")) {
-      const audio = document.getElementById("audio-player");
-      if (audio) {
-        audio.play();
-        outputText.textContent = `Playing song...`;
-      } else {
-        outputText.textContent = `Audio player not found.`;
-      }
-    }
-
 
     // ⚙️ Settings
     if (cmd.includes('enable dark')) {
-      socket.emit('execute-action', {
-        type: 'TOGGLE_SETTING',
-        payload: { setting: 'darkmode', state: true }
-      });
+      socket.emit('execute-action', { type: 'TOGGLE_SETTING', payload: { setting: 'darkmode', state: true } });
       return;
     }
     if (cmd.includes('disable dark') || cmd.includes('light mode')) {
-      socket.emit('execute-action', {
-        type: 'TOGGLE_SETTING',
-        payload: { setting: 'darkmode', state: false }
-      });
-      return;
-    }
-    if (cmd.includes('enable notification')) {
-      socket.emit('execute-action', {
-        type: 'TOGGLE_SETTING',
-        payload: { setting: 'notifications', state: true }
-      });
-      return;
-    }
-    if (cmd.includes('disable notification')) {
-      socket.emit('execute-action', {
-        type: 'TOGGLE_SETTING',
-        payload: { setting: 'notifications', state: false }
-      });
+      socket.emit('execute-action', { type: 'TOGGLE_SETTING', payload: { setting: 'darkmode', state: false } });
       return;
     }
 
     // === REDIRECTIONS ===
-    if (cmd.includes('mood history')) {
-      socket.emit('execute-action', { type: 'REDIRECT', payload: { url: 'history.html' } });
-      return;
-    }
-    if (cmd.includes('settings')) {
-      socket.emit('execute-action', { type: 'REDIRECT', payload: { url: 'settings.html' } });
-      return;
-    }
-    if (cmd.includes('calendar')) {
-      socket.emit('execute-action', { type: 'REDIRECT', payload: { url: 'calendar.html' } });
-      return;
-    }
-    if (cmd.includes('songs') || cmd.includes('music')) {
-      socket.emit('execute-action', { type: 'REDIRECT', payload: { url: 'songs.html' } });
-      return;
-    }
-    if (cmd.includes('game') || cmd.includes('dino')) {
-      socket.emit('execute-action', { type: 'REDIRECT', payload: { url: 'games/dino.html' } });
-      return;
-    }
-    if (cmd.includes('home')) {
-      socket.emit('execute-action', { type: 'REDIRECT', payload: { url: 'home.html' } });
-      return;
-    }
-    if (cmd.includes('go back') || cmd.includes('previous page')) {
-      socket.emit('execute-action', { type: 'GO_BACK' });
-      return;
-    }
-    if (cmd.includes('play lover')) {
-      socket.emit('execute-action', {
-        type: 'REDIRECT',
-        payload: { url: 'songs/lover.html' } // Or the correct path
-      });
-      return;
-    }
+    if (cmd.includes('mood history')) { socket.emit('execute-action', { type: 'REDIRECT', payload: { url: 'history.html' } }); return; }
+    if (cmd.includes('settings')) { socket.emit('execute-action', { type: 'REDIRECT', payload: { url: 'settings.html' } }); return; }
+    if (cmd.includes('calendar')) { socket.emit('execute-action', { type: 'REDIRECT', payload: { url: 'calendar.html' } }); return; }
+    if (cmd.includes('songs') || cmd.includes('music')) { socket.emit('execute-action', { type: 'REDIRECT', payload: { url: 'songs.html' } }); return; }
+    if (cmd.includes('game') || cmd.includes('dino')) { socket.emit('execute-action', { type: 'REDIRECT', payload: { url: 'games/dino.html' } }); return; }
+    if (cmd.includes('home')) { socket.emit('execute-action', { type: 'REDIRECT', payload: { url: 'home.html' } }); return; }
 
     // ❓ Unknown
     socket.emit('feedback', { message: `❓ Unknown command: "${command}"` });
   });
 
+  // ✅ Get moods for the week
   socket.on('get-week-moods', () => {
     const now = new Date();
     const start = new Date(now);
@@ -227,23 +168,16 @@ io.on('connection', (socket) => {
     const startDate = start.toISOString().split('T')[0];
     const endDate = now.toISOString().split('T')[0];
 
-    db.all(`SELECT * FROM moods WHERE date(timestamp) BETWEEN ? AND ? ORDER BY timestamp DESC`, [startDate, endDate], (err, rows) => {
-      socket.emit('week-moods', rows || []);
-    });
+    db.query(`SELECT mood, date FROM mood_logs WHERE date BETWEEN ? AND ? ORDER BY date DESC`,
+      [startDate, endDate],
+      (err, rows) => socket.emit('week-moods', err ? [] : rows)
+    );
   });
 
-  socket.on('get-calendar-events', () => {
-    db.all(`SELECT title, date FROM calendar_events`, [], (err, rows) => {
-      socket.emit('calendar-events', rows || []);
-    });
-  });
-
-  socket.on('disconnect', () => {
-    console.log('❌ Client disconnected');
-  });
+  socket.on('disconnect', () => console.log('❌ Client disconnected'));
 });
 
-// ===================== CHATBOT API =====================
+// ✅ CHATBOT API
 app.post('/chat', async (req, res) => {
   try {
     const { prompt } = req.body;
@@ -258,38 +192,20 @@ app.post('/chat', async (req, res) => {
   }
 });
 
-// ===================== LOGIN API =====================
+// ✅ LOGIN API
 app.post('/api/login', (req, res) => {
   const { username, password } = req.body;
-  db.get(`SELECT * FROM users WHERE username = ?`, [username], (err, user) => {
-    if (err || !user || !bcrypt.compareSync(password, user.password)) {
-      return res.status(401).json({ error: 'Invalid credentials' });
-    }
+  db.query(`SELECT * FROM users WHERE username = ?`, [username], (err, results) => {
+    if (err || results.length === 0) return res.status(401).json({ error: 'Invalid credentials' });
+    const user = results[0];
+    if (!bcrypt.compareSync(password, user.password)) return res.status(401).json({ error: 'Invalid credentials' });
     res.json({ success: true, userId: user.id });
   });
 });
 
-// ===================== STATIC ROUTES =====================
+// ✅ STATIC ROUTE
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'frontend', 'index.html'));
+  res.sendFile(path.join(__dirname, '..', 'frontend', 'home.html'));
 });
 
-server.listen(PORT, () => {
-  console.log(`🚀 Server running at http://localhost:${PORT}`);
-});
-
-// ===================== MOOD LOGGING API =====================
-app.post("/api/mood", (req, res) => {
-  const { userId, mood, date } = req.body;
-
-  const sql = `INSERT INTO mood_entries (user_id, mood, date) VALUES (?, ?, ?)`;
-  db.run(sql, [userId, mood, date], function (err) {
-    if (err) {
-      return res.status(500).json({ success: false, message: err.message });
-    }
-    res.json({ success: true, moodId: this.lastID });
-  });
-});
-
-
-
+server.listen(PORT, () => console.log(`🚀 Server running at http://localhost:${PORT}`));

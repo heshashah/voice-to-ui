@@ -1,24 +1,33 @@
-// Dummy data - in real use, replace this with a fetch from the backend
-const moodEntries = [
-  { mood: 'anxious today', time: '15/7/2025, 9:21:23 PM' },
-  { mood: 'happy', time: '15/7/2025, 9:16:25 PM' },
-  { mood: 'happy today', time: '15/7/2025, 8:42:00 PM' }
-];
-
 const moodHistoryContainer = document.getElementById('mood-history');
 
-moodEntries.forEach((entry, index) => {
-  const div = document.createElement('div');
-  div.className = 'mood-entry';
-  div.innerHTML = `
-    <div>
-      <strong>${index + 1}. ${entry.mood}</strong><br/>
-      <small>🕒 ${entry.time}</small>
-    </div>
-    <button class="chat-btn" onclick="openChat('${entry.mood}')">🧠 Chat</button>
-  `;
-  moodHistoryContainer.appendChild(div);
-});
+// ✅ Fetch moods from backend
+fetch('/api/moods')
+  .then(res => res.json())
+  .then(moods => {
+    if (!moods.length) {
+      moodHistoryContainer.innerHTML = "<p>No mood history found.</p>";
+      return;
+    }
+
+    moods.forEach((entry, index) => {
+      const formattedDate = new Date(entry.date).toLocaleString(); // ✅ Fixes "Invalid Date"
+
+      const div = document.createElement('div');
+      div.className = 'mood-entry';
+      div.innerHTML = `
+        <div>
+          <strong>${index + 1}. ${entry.mood}</strong><br/>
+          <small>🕒 ${formattedDate}</small>
+        </div>
+        <button class="chat-btn" onclick="openChat('${entry.mood}')">🧠 Chat</button>
+      `;
+      moodHistoryContainer.appendChild(div);
+    });
+  })
+  .catch(err => {
+    console.error('❌ Error loading moods:', err);
+    moodHistoryContainer.innerHTML = "<p>Error loading mood history.</p>";
+  });
 
 let selectedMood = '';
 
