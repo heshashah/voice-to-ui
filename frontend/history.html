@@ -281,10 +281,18 @@
   <!-- Chatbot Modal -->
   <div id="chatModal" class="chat-modal">
     <div class="chat-box">
-      <div style="display: flex; justify-content: space-between; align-items: center;">
+      <div style="display: flex; justify-content: space-between; align-items: center; gap:10px;">
         <h2 class="text-lg font-semibold">🧠 Talk to ME!</h2>
+
+        <!-- ✅ Voice Toggle Button -->
+        <button onclick="toggleVoice()" id="voiceToggle"
+          style="background:#10b981;color:white;padding:5px 10px;border-radius:5px;">
+          🔊 Voice On
+        </button>
+
         <button onclick="closeChat()" class="text-red-500 font-bold text-xl">&times;</button>
       </div>
+
       <div id="chatLog" class="chat-log"></div>
       <div class="chat-input">
         <input type="text" id="chatInput" placeholder="Type how you're feeling...">
@@ -388,6 +396,7 @@
       <p><strong>Bot:</strong> I'm here with you. Want to talk more about it?</p>
     `;
       chatModal.style.display = "flex";
+      speak("I'm here with you. Want to talk more about it?");
     }
 
     function closeChat() {
@@ -403,6 +412,9 @@
       chatLog.innerHTML += `<p><strong>You:</strong> ${message}</p>`;
       const reply = getBotReply(message);
       chatLog.innerHTML += `<p><strong>Bot:</strong> ${reply}</p>`;
+
+      speak(reply); // ✅ This makes the bot voice reply
+
       input.value = "";
       chatLog.scrollTop = chatLog.scrollHeight;
     }
@@ -411,7 +423,7 @@
       const m = msg.toLowerCase();
 
       if (m.includes('anxious') || m.includes('nervous')) {
-        return "I'm here with you. Want to talk more about it?";
+        return "I'm here with you. What would have you feel better?";
       }
 
       if (m.includes('overwhelmed') || m.includes('stressed')) {
@@ -436,13 +448,22 @@
         return "You're not alone. Would you like me to suggest something uplifting?";
       }
 
+      if (m.includes('angry') || m.includes('frustrated')) {
+        return "It's okay to feel that way. Want to talk about what's bothering you?";
+      }
+
+      if (m.includes('yes help me') || m.includes('yes please')) {
+        return "Its okay to feel this way. I am here to make you feel better. Would you like me to help you?";
+      }
+
+
       return "Thanks for telling me. Would you like me to help you feel better?";
     }
 
     // Voice Input
     let voiceInputRecognizer;
 
-    function startVoiceInput() {
+      function startVoiceInput() {
       const chatInput = document.getElementById("chatInput");
 
       if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
@@ -478,7 +499,23 @@
       voiceInputRecognizer.start();
     }
 
-    
+    let voiceEnabled = true;
+
+    function toggleVoice() {
+      voiceEnabled = !voiceEnabled;
+      document.getElementById("voiceToggle").textContent = voiceEnabled ? "🔊 Voice On" : "🔇 Voice Off";
+    }
+
+    function speak(text) {
+      if (!voiceEnabled) return;
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = "en-US";
+      utterance.rate = 1;
+      utterance.pitch = 1;
+      speechSynthesis.speak(utterance);
+    }
+
+
   </script>
 
 </body>

@@ -81,3 +81,11 @@ function getSmartReply(msg) {
   }
   return 'Thank you for sharing. Would you like some tips to improve your mood?';
 }
+function speak(text) {
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = "en-US"; // ✅ Choose language
+  utterance.rate = 1;       // ✅ Speed (1 = normal)
+  utterance.pitch = 1;      // ✅ Voice pitch
+  speechSynthesis.speak(utterance);
+}
+
