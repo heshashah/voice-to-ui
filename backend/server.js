@@ -105,7 +105,6 @@ io.on('connection', (socket) => {
     }
 
     // 📅 Add Event
-    // 📅 Add Event
     if (cmd.startsWith('mark')) {
       const event = parseEventCommand(cmd);
       if (event) {
@@ -164,6 +163,16 @@ io.on('connection', (socket) => {
       return;
     }
 
+    // 🎵 Music
+    if (cmd.startsWith('play')) {
+      const songName = cmd.replace('play', '').trim().toLowerCase();
+      const songMap = { 'lover': 'games/assets/audio/Lover.mp3' };
+      const songPath = songMap[songName];
+      if (songPath) socket.emit('execute-action', { type: 'PLAY_SONG', payload: { file: songPath } });
+      else socket.emit('feedback', { message: `❌ Song "${songName}" not found.` });
+      return;
+    }
+
     // === REDIRECTIONS ===
     if (cmd.includes('mood history')) { socket.emit('execute-action', { type: 'REDIRECT', payload: { url: 'history.html' } }); return; }
     if (cmd.includes('settings')) { socket.emit('execute-action', { type: 'REDIRECT', payload: { url: 'settings.html' } }); return; }
@@ -171,7 +180,58 @@ io.on('connection', (socket) => {
     if (cmd.includes('songs') || cmd.includes('music')) { socket.emit('execute-action', { type: 'REDIRECT', payload: { url: 'songs.html' } }); return; }
     if (cmd.includes('game') || cmd.includes('dino')) { socket.emit('execute-action', { type: 'REDIRECT', payload: { url: 'games/dino.html' } }); return; }
     if (cmd.includes('home')) { socket.emit('execute-action', { type: 'REDIRECT', payload: { url: 'home.html' } }); return; }
+    if (cmd.includes('mood history')) { socket.emit('execute-action', { type: 'REDIRECT', payload: { url: 'history.html' } }); return; }
 
+    // ✅ Medicine Tracker 
+    if (cmd.includes('medicine tracker') || cmd.includes('show me medicine tracker') || cmd.includes('go to medicine tracker')) {
+      socket.emit('execute-action', { type: 'REDIRECT', payload: { url: 'medicine.html' } });
+      return;
+    }
+
+    // 💊 Handle "add medicine" voice command
+    // 💊 Handle "add medicine" voice command
+    if (cmd.startsWith('add medicine')) {
+      // Example: "add medicine paracetamol 500mg at 9pm on july 5"
+      const match = cmd.match(/add medicine ([a-zA-Z0-9\s]+) (\d+mg)? at ([0-9:apm\s]+) on (\w+) (\d{1,2})/i);
+
+      if (match) {
+        const [, name, dosage, time, monthName, day] = match;
+        const month = monthMap[monthName.toLowerCase()];
+        if (!month) {
+          socket.emit('feedback', { message: '❌ Could not understand month' });
+          return;
+        }
+
+        const date = `${new Date().getFullYear()}-${month}-${String(day).padStart(2, '0')}`;
+
+        // ✅ Send data to frontend to auto-fill fields
+        socket.emit('voice-command-result', {
+          type: 'MEDICINE_COMMAND',
+          payload: { name: name.trim(), dosage: dosage || '', time: time.trim(), date }
+        });
+
+        // ✅ Also insert into DB
+        db.query(
+          `INSERT INTO medicines (name, dosage, time, date) VALUES (?, ?, ?, ?)`,
+          [name.trim(), dosage || '', time.trim(), date],
+          (err) => {
+            if (err) {
+              console.error('❌ Medicine insert error:', err);
+              socket.emit('feedback', { message: '❌ Failed to save medicine in DB' });
+            } else {
+              socket.emit('feedback', { message: `💊 Medicine "${name}" scheduled on ${date} at ${time}` });
+              db.query(`SELECT * FROM medicines ORDER BY date ASC`, (err, rows) => {
+                if (!err) socket.emit('medicine-data', rows);
+              });
+            }
+          }
+        );
+      } else {
+        socket.emit('feedback', { message: '❌ Could not parse medicine command. Try: add medicine paracetamol 500mg at 9pm on july 5' });
+      }
+      return;
+    }
+    
     // ❓ Unknown
     socket.emit('feedback', { message: `❓ Unknown command: "${command}"` });
   });
@@ -188,6 +248,22 @@ io.on('connection', (socket) => {
       [startDate, endDate],
       (err, rows) => socket.emit('week-moods', err ? [] : rows)
     );
+  });
+
+  socket.on('disconnect', () => console.log('❌ Client disconnected'));
+
+  // ✅ Fetch Calendar Events
+  socket.on('get-calendar-events', () => {
+    db.query(`SELECT title, date FROM calendar_events ORDER BY date ASC`, (err, rows) => {
+      socket.emit('calendar-events', err ? [] : rows);
+    });
+  });
+
+  // ✅ Fetch Medicines for Medicine Tracker
+  socket.on('get-medicines', () => {
+    db.query(`SELECT id, name, dosage, time, date FROM medicines ORDER BY date ASC`, (err, rows) => {
+      socket.emit('medicine-data', err ? [] : rows);
+    });
   });
 
   socket.on('disconnect', () => console.log('❌ Client disconnected'));
@@ -224,4 +300,32 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'frontend', 'home.html'));
 });
 
+//MEDICINE.HTML
 server.listen(PORT, () => console.log(`🚀 Server running at http://localhost:${PORT}`));
+db.query(`
+  CREATE TABLE IF NOT EXISTS medicines (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    time VARCHAR(50) NOT NULL,
+    date DATE NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  )
+`);
+
+// ✅ API to Add Medicine
+app.post('/api/add-medicine', (req, res) => {
+  const { name, dosage, time, date } = req.body;
+  if (!name || !time || !date) {
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
+
+  db.query(`INSERT INTO medicines (name, dosage, time, date) VALUES (?, ?, ?, ?)`,
+    [name, dosage, time, date],
+    (err) => {
+      if (err) {
+        console.error('❌ Error inserting medicine:', err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+      res.json({ success: true, message: 'Medicine added successfully' });
+    });
+});
