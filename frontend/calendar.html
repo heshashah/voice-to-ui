@@ -213,7 +213,12 @@
       }
 
       // 🔄 Fetch events from database on load
-      socket.emit('get-calendar-events');
+      socket.on('get-calendar-events', () => {
+        db.query(`SELECT title, date FROM calendar_events ORDER BY date ASC`, (err, rows) => {
+          socket.emit('calendar-events', err ? [] : rows);
+        });
+      });
+
     });
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;

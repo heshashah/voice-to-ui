@@ -65,7 +65,7 @@ const monthMap = {
 };
 
 function parseEventCommand(command) {
-  const match = command.match(/mark (\w+)\s+(\d{1,2}) as (.+)/i);
+  const match = command.match(/mark\s+([a-zA-Z]+)\s+(\d{1,2})\s+as\s+(.+)/i);
   if (!match) return null;
   const [, monthName, day, title] = match;
   const month = monthMap[monthName.toLowerCase()];
@@ -105,16 +105,32 @@ io.on('connection', (socket) => {
     }
 
     // 📅 Add Event
+    // 📅 Add Event
     if (cmd.startsWith('mark')) {
       const event = parseEventCommand(cmd);
       if (event) {
-        db.query(`INSERT INTO calendar_events (title, date) VALUES (?, ?)`, [event.title, event.date]);
-        socket.emit('execute-action', { type: 'ADD_EVENT', payload: event });
+        db.query(`INSERT INTO calendar_events (title, date) VALUES (?, ?)`, [event.title, event.date], (err) => {
+          if (err) {
+            console.error('❌ DB Insert Error:', err);
+            socket.emit('feedback', { message: '❌ Failed to save event to DB' });
+            return;
+          }
+
+          // ✅ Notify frontend that the event was added
+          socket.emit('execute-action', { type: 'ADD_EVENT', payload: event });
+          socket.emit('feedback', { message: `✅ Event "${event.title}" added on ${event.date}` });
+
+          // ✅ 🔥 Fetch all events again and send to frontend to keep it updated
+          db.query(`SELECT title, date FROM calendar_events ORDER BY date ASC`, (err, rows) => {
+            if (!err) socket.emit('calendar-events', rows);
+          });
+        });
       } else {
         socket.emit('feedback', { message: `❌ Could not parse event: "${command}"` });
       }
       return;
     }
+
 
     // ❌ Clear Calendar Events
     if (cmd.startsWith('clear')) {
