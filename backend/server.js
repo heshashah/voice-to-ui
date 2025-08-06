@@ -64,6 +64,15 @@ const monthMap = {
   september: '09', october: '10', november: '11', december: '12'
 };
 
+function formatDateToDayDateYear(dateStr) {
+  const dateObj = new Date(dateStr);
+  if (isNaN(dateObj)) return dateStr; // fallback if invalid
+  const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+  return dateObj.toLocaleDateString('en-US', options);
+}
+
+
+
 function parseEventCommand(command) {
   const match = command.match(/mark\s+([a-zA-Z]+)\s+(\d{1,2})\s+as\s+(.+)/i);
   if (!match) return null;
@@ -187,8 +196,6 @@ io.on('connection', (socket) => {
       socket.emit('execute-action', { type: 'REDIRECT', payload: { url: 'medicine.html' } });
       return;
     }
-
-    // 💊 Handle "add medicine" voice command
     // 💊 Handle "add medicine" voice command
     if (cmd.startsWith('add medicine')) {
       // Example: "add medicine paracetamol 500mg at 9pm on july 5"
@@ -220,9 +227,17 @@ io.on('connection', (socket) => {
               socket.emit('feedback', { message: '❌ Failed to save medicine in DB' });
             } else {
               socket.emit('feedback', { message: `💊 Medicine "${name}" scheduled on ${date} at ${time}` });
-              db.query(`SELECT * FROM medicines ORDER BY date ASC`, (err, rows) => {
-                if (!err) socket.emit('medicine-data', rows);
+              db.query(`SELECT id, name, dosage, time, date FROM medicines ORDER BY date ASC`, (err, rows) => {
+                if (!err) {
+                  const formattedRows = rows.map(med => ({
+                    ...med,
+                    date: formatDateToDayDateYear(med.date)
+                  }));
+                  socket.emit('medicine-data', formattedRows);
+                }
               });
+
+
             }
           }
         );
@@ -231,7 +246,7 @@ io.on('connection', (socket) => {
       }
       return;
     }
-    
+
     // ❓ Unknown
     socket.emit('feedback', { message: `❓ Unknown command: "${command}"` });
   });
