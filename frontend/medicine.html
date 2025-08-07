@@ -276,67 +276,67 @@
         });
 
         // 🎤 Voice Recognition
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        let recognition, isListening = false;
-        if (SpeechRecognition) {
-            recognition = new SpeechRecognition();
-            recognition.lang = 'en-US';
-            recognition.continuous = false;
+        // const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        // let recognition, isListening = false;
+        // if (SpeechRecognition) {
+        //     recognition = new SpeechRecognition();
+        //     recognition.lang = 'en-US';
+        //     recognition.continuous = false;
 
-            recognition.onstart = () => {
-                isListening = true;
-                micButton.classList.add('listening');
-                statusBox.classList.add('visible');
-                status.textContent = 'Listening...';
-            };
+        //     recognition.onstart = () => {
+        //         isListening = true;
+        //         micButton.classList.add('listening');
+        //         statusBox.classList.add('visible');
+        //         status.textContent = 'Listening...';
+        //     };
 
-            recognition.onend = () => {
-                isListening = false;
-                micButton.classList.remove('listening');
-                statusBox.classList.remove('visible');
-            };
+        //     recognition.onend = () => {
+        //         isListening = false;
+        //         micButton.classList.remove('listening');
+        //         statusBox.classList.remove('visible');
+        //     };
 
-            recognition.onresult = (e) => {
-                const command = e.results[0][0].transcript.trim().toLowerCase();
-                output.textContent = command;
-                socket.emit('voice-command', command);
-            };
-        }
+        //     recognition.onresult = (e) => {
+        //         const command = e.results[0][0].transcript.trim().toLowerCase();
+        //         output.textContent = command;
+        //         socket.emit('voice-command', command);
+        //     };
+        // }
 
-        micButton.addEventListener('click', () => {
-            if (!recognition) return;
-            isListening ? recognition.stop() : recognition.start();
-        });
+        // micButton.addEventListener('click', () => {
+        //     if (!recognition) return;
+        //     isListening ? recognition.stop() : recognition.start();
+        // });
 
-        // ✅ Manual Add via Form
-        document.getElementById('medicineForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const name = document.getElementById('name').value;
-            const dosage = document.getElementById('dosage').value;
-            const time = document.getElementById('time').value;
-            const date = document.getElementById('date').value;
+        // // ✅ Manual Add via Form
+        // document.getElementById('medicineForm').addEventListener('submit', async (e) => {
+        //     e.preventDefault();
+        //     const name = document.getElementById('name').value;
+        //     const dosage = document.getElementById('dosage').value;
+        //     const time = document.getElementById('time').value;
+        //     const date = document.getElementById('date').value;
 
-            const res = await fetch('/api/add-medicine', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, dosage, time, date })
-            });
+        //     const res = await fetch('/api/add-medicine', {
+        //         method: 'POST',
+        //         headers: { 'Content-Type': 'application/json' },
+        //         body: JSON.stringify({ name, dosage, time, date })
+        //     });
 
-            const data = await res.json();
-            alert(data.message);
-            socket.emit('get-medicines');
-        });
+        //     const data = await res.json();
+        //     alert(data.message);
+        //     socket.emit('get-medicines');
+        // });
 
-        // ✅ Auto-fill inputs when command is recognized
-        socket.on('voice-command-result', (data) => {
-            if (data.type === 'MEDICINE_COMMAND') {
-                const { name, dosage, time, date } = data.payload;
-                document.getElementById('name').value = name;
-                document.getElementById('dosage').value = dosage || '';
-                document.getElementById('time').value = time;
-                document.getElementById('date').value = date;
-            }
-        });
+        // // ✅ Auto-fill inputs when command is recognized
+        // socket.on('voice-command-result', (data) => {
+        //     if (data.type === 'MEDICINE_COMMAND') {
+        //         const { name, dosage, time, date } = data.payload;
+        //         document.getElementById('name').value = name;
+        //         document.getElementById('dosage').value = dosage || '';
+        //         document.getElementById('time').value = time;
+        //         document.getElementById('date').value = date;
+        //     }
+        // });
 
         // ✅ Auto speak and start recognition on page load
         window.addEventListener('load', () => {
