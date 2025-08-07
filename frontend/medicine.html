@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Medicine Tracker</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+
+    <style>
+        body {
+            margin: 0;
+            background-color: #DDAF8C;
+            font-family: 'Segoe UI', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .container {
+            background-color: #FDF1D4;
+            border-radius: 40px;
+            width: 95%;
+            height: 95%;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem;
+        }
+
+        .wave-top,
+        .wave-bottom {
+            position: absolute;
+            width: 200%;
+            height: 200px;
+            background: linear-gradient(to right, #FCD34D, #EBA85D, #FCD34D);
+            border-radius: 100%;
+            opacity: 0.7;
+            animation: floatWave 6s ease-in-out infinite alternate;
+            z-index: 0;
+        }
+
+        .wave-top {
+            top: -80px;
+            left: -100px;
+            transform: rotate(15deg);
+        }
+
+        .wave-bottom {
+            bottom: -100px;
+            right: -100px;
+            transform: rotate(-15deg);
+        }
+
+        @keyframes floatWave {
+            0% {
+                transform: translateY(0) rotate(15deg);
+            }
+
+            100% {
+                transform: translateY(-10px) rotate(15deg);
+            }
+        }
+
+        .logo {
+            position: relative;
+            z-index: 1;
+            text-align: center;
+            margin-top: 4rem;
+        }
+
+        .logo h1 {
+            font-size: 3rem;
+            font-weight: bold;
+            letter-spacing: 2px;
+            color: #B16D50;
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        .navbar {
+            position: relative;
+            z-index: 2;
+            width: 100%;
+            display: flex;
+            justify-content: space-around;
+            padding: 1rem 0;
+            font-weight: bold;
+            color: #6B3E2E;
+        }
+
+        .navbar a {
+            text-decoration: none;
+            color: #6B3E2E;
+            padding: 0.5rem;
+            transition: color 0.3s ease;
+        }
+
+        .navbar a:hover {
+            color: #B16D50;
+        }
+
+        .med-box {
+            z-index: 1;
+            width: 100%;
+            max-height: 400px;
+            overflow-y: auto;
+            margin-top: 1rem;
+            padding: 1rem;
+            background-color: transparent;
+            border-radius: 1rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 1.1rem;
+        }
+
+        th,
+        td {
+            border: 1px solid #B16D50;
+            padding: 10px;
+            text-align: center;
+        }
+
+        th {
+            background: #EBA85D;
+            color: #fff;
+            font-weight: bold;
+        }
+
+        tr:nth-child(even) {
+            background: #f9e2cc;
+        }
+
+        tr:nth-child(odd) {
+            background: #fcebd6;
+        }
+
+        #medicineForm input,
+        #medicineForm button {
+            margin: 5px;
+            padding: 8px;
+            border-radius: 8px;
+            border: 1px solid #B16D50;
+        }
+
+        #medicineForm button {
+            background: #B16D50;
+            color: white;
+            cursor: pointer;
+        }
+
+        #medicineForm button:hover {
+            background: #6B3E2E;
+        }
+
+        .mic-button.listening {
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+            }
+
+            70% {
+                box-shadow: 0 0 0 25px rgba(239, 68, 68, 0);
+            }
+        }
+
+        .mic-container {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            z-index: 2;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+        }
+
+        .status-box {
+            background-color: rgba(0, 0, 0, 0.6);
+            color: white;
+            border-radius: 0.75rem;
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .status-box.visible {
+            opacity: 1;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="wave-top"></div>
+        <div class="wave-bottom"></div>
+
+        <nav class="navbar">
+            <a href="home.html">Home</a>
+            <a href="calendar.html">Calendar</a>
+            <a href="songs.html">Songs</a>
+            <a href="settings.html">Settings</a>
+        </nav>
+
+        <div class="logo">
+            <h1>Medicine Tracker 💊</h1>
+        </div>
+
+        <div id="medicineList" class="med-box">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Medicine Name</th>
+                        <th>Dosage</th>
+                        <th>Time</th>
+                        <th>Date</th>
+                    </tr>
+                </thead>
+                <tbody id="medicineTable"></tbody>
+            </table>
+        </div>
+
+        <form id="medicineForm">
+            <input type="text" id="name" placeholder="Medicine Name" required>
+            <input type="text" id="dosage" placeholder="Dosage (optional)">
+            <input type="time" id="time" required>
+            <input type="date" id="date" required>
+            <button type="submit">Add Medicine</button>
+        </form>
+
+        <div class="mic-container">
+            <div id="status-display" class="status-box">
+                <p id="status" class="font-semibold">Listening...</p>
+                <p id="command-output" class="text-pink-400 text-sm mt-1">-</p>
+            </div>
+            <button id="mic-button"
+                class="mic-button bg-red-500 hover:bg-red-600 text-white w-16 h-16 rounded-full shadow-lg flex items-center justify-center">
+                <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M7 4a3 3 0 016 0v6a3 3 0 11-6 0V4z" />
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const socket = io();
+        const micButton = document.getElementById('mic-button');
+        const statusBox = document.getElementById('status-display');
+        const status = document.getElementById('status');
+        const output = document.getElementById('command-output');
+        const tableBody = document.getElementById("medicineTable");
+
+        // ✅ Load Medicines
+        socket.emit('get-medicines');
+
+        // ✅ Render Medicines in Table
+        socket.on('medicine-data', (rows) => {
+            tableBody.innerHTML = "";
+            rows.forEach(row => {
+                tableBody.innerHTML += `<tr>
+                <td>${row.name}</td>
+                <td>${row.dosage || '-'}</td>
+                <td>${row.time}</td>
+                <td>${row.date}</td>
+            </tr>`;
+            });
+        });
+
+        // 🎤 Voice Recognition
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        let recognition, isListening = false;
+        if (SpeechRecognition) {
+            recognition = new SpeechRecognition();
+            recognition.lang = 'en-US';
+            recognition.continuous = false;
+
+            recognition.onstart = () => {
+                isListening = true;
+                micButton.classList.add('listening');
+                statusBox.classList.add('visible');
+                status.textContent = 'Listening...';
+            };
+
+            recognition.onend = () => {
+                isListening = false;
+                micButton.classList.remove('listening');
+                statusBox.classList.remove('visible');
+            };
+
+            recognition.onresult = (e) => {
+                const command = e.results[0][0].transcript.trim().toLowerCase();
+                output.textContent = command;
+                socket.emit('voice-command', command);
+            };
+        }
+
+        micButton.addEventListener('click', () => {
+            if (!recognition) return;
+            isListening ? recognition.stop() : recognition.start();
+        });
+
+        // ✅ Manual Add via Form
+        document.getElementById('medicineForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('name').value;
+            const dosage = document.getElementById('dosage').value;
+            const time = document.getElementById('time').value;
+            const date = document.getElementById('date').value;
+
+            const res = await fetch('/api/add-medicine', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, dosage, time, date })
+            });
+
+            const data = await res.json();
+            alert(data.message);
+            socket.emit('get-medicines');
+        });
+
+        // ✅ Auto-fill inputs when command is recognized
+        socket.on('voice-command-result', (data) => {
+            if (data.type === 'MEDICINE_COMMAND') {
+                const { name, dosage, time, date } = data.payload;
+                document.getElementById('name').value = name;
+                document.getElementById('dosage').value = dosage || '';
+                document.getElementById('time').value = time;
+                document.getElementById('date').value = date;
+            }
+        });
+
+        // ✅ Auto speak and start recognition on page load
+        window.addEventListener('load', () => {
+            const speakText = new SpeechSynthesisUtterance("Add medicines as per your schedule.");
+            speechSynthesis.speak(speakText);
+
+            // Wait for the voice to finish before starting recognition (optional delay)
+            speakText.onend = () => {
+                if (recognition && !isListening) {
+                    recognition.start();
+                }
+            };
+        });
+    </script>
+
+
+</body>
+
+</html>

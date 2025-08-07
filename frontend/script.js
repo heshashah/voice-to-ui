@@ -104,3 +104,53 @@ function setupVoiceCommands() {
     console.error("Speech recognition error:", event.error);
   };
 }
+// 🎯 Medicine Tracker Navigation
+if (cmd.includes('medicine tracker') || cmd.includes('show me medicine')) {
+  socket.emit('execute-action', { type: 'REDIRECT', payload: { url: 'medicine.html' } });
+  return;
+}
+// 🎯 Medicine Tracker Navigation
+if (cmd.includes('medicine tracker') || cmd.includes('show me medicine')) {
+  socket.emit('execute-action', { type: 'REDIRECT', payload: { url: 'medicine.html' } });
+  return;
+}
+// ✅ Add Medicine Command
+if (cmd.startsWith('add')) {
+  const medicineMatch = cmd.match(/add (.+) at (\d{1,2}(?::\d{2})?\s?(?:am|pm)?) on (\w+)\s+(\d{1,2})/i);
+
+  if (medicineMatch) {
+    const [, medicine, time, monthName, day] = medicineMatch;
+    const month = monthMap[monthName.toLowerCase()];
+    const currentYear = new Date().getFullYear();
+    const date = `${currentYear}-${month}-${String(day).padStart(2, '0')}`;
+
+    db.query(
+      `INSERT INTO medicines (name, time, date) VALUES (?, ?, ?)`,
+      [medicine.trim(), time.trim(), date],
+      (err) => {
+        if (err) {
+          console.error('❌ Error inserting medicine:', err);
+          socket.emit('feedback', { message: '❌ Failed to save medicine.' });
+        } else {
+          socket.emit('feedback', { message: `💊 Medicine "${medicine}" scheduled at ${time} on ${date}` });
+          socket.emit('execute-action', { type: 'ADD_MEDICINE', payload: { name: medicine, time, date } });
+        }
+      }
+    );
+  } else {
+    socket.emit('feedback', { message: `❌ Could not parse medicine command: "${command}"` });
+  }
+  return;
+  
+}
+window.addEventListener('load', () => {
+    // 👄 Speak "Add medicines"
+    const speakText = new SpeechSynthesisUtterance("Add medicines");
+    speechSynthesis.speak(speakText);
+
+    // 🎤 Automatically start recognition
+    if (recognition && !isListening) {
+        recognition.start();
+    }
+});
+
