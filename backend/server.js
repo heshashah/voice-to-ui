@@ -93,6 +93,12 @@ function parseClearCommand(command) {
   return { date: `${currentYear}-${month}-${String(day).padStart(2, '0')}` };
 }
 
+function speak(text) {
+  const utterance = new SpeechSynthesisUtterance(text);
+  speechSynthesis.speak(utterance);
+}
+
+
 // ===================== SOCKET =====================
 io.on('connection', (socket) => {
   console.log('✅ Client connected');
@@ -246,6 +252,44 @@ io.on('connection', (socket) => {
       }
       return;
     }
+
+    // 🌿 Personal Well-being Coach
+    if (cmd.includes('open wellness page') || cmd.includes('go to wellness')) {
+      // If you’re sending back a URL for frontend navigation
+      socket.emit('execute-action', { type: 'REDIRECT', payload: { url: 'wellness.html' } });
+      return;
+    }
+
+    if (cmd.includes('start') && cmd.includes('breathing exercise')) {
+      socket.emit('feedback', { message: '🧘 Starting a 5-minute guided breathing exercise. Focus on your breath...' });
+      socket.emit('execute-action', { type: 'START_BREATHING_EXERCISE', payload: { duration: 5 } });
+      return;
+    }
+
+    if (cmd.includes('how are you feeling today') || cmd.includes('daily health check-in')) {
+      const date = new Date().toISOString().split('T')[0];
+      db.query(`INSERT INTO mood_logs (mood, date) VALUES (?, ?)`, ['Check-in initiated', date], (err) => {
+        if (err) socket.emit('feedback', { message: '❌ Error starting health check-in.' });
+        else socket.emit('feedback', { message: '🩺 How are you feeling today? Please share your mood.' });
+      });
+      return;
+    }
+
+    if (cmd.includes('suggest exercises for back pain')) {
+      socket.emit('feedback', { message: '🏋️ Suggesting gentle exercises for back pain...' });
+      socket.emit('execute-action', { type: 'SHOW_EXERCISES', payload: { condition: 'back pain' } });
+      return;
+    }
+
+    if (command.includes("start a 5-minute breathing exercise")) {
+      speak("Let's begin. Breathe in...");
+      setTimeout(() => speak("Breathe out..."), 4000);
+      setTimeout(() => speak("Breathe in..."), 8000);
+      setTimeout(() => speak("Breathe out..."), 12000);
+      // repeat as needed for 5 minutes
+    }
+
+
 
     // ❓ Unknown
     socket.emit('feedback', { message: `❓ Unknown command: "${command}"` });
