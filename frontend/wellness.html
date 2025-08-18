@@ -2,292 +2,303 @@
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8" />
-    <title>Wellness Coach</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <meta charset="UTF-8" />
+  <title>Wellness Coach</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      background-color: #DDAF8C;
+      font-family: 'Segoe UI', sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
 
-    <style>
-        body {
-            margin: 0;
-            background-color: #DDAF8C;
-            font-family: 'Segoe UI', sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-        }
+    .container {
+      background-color: #FDF1D4;
+      border-radius: 40px;
+      width: 95%;
+      height: 95%;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
 
-        .container {
-            background-color: #FDF1D4;
-            border-radius: 40px;
-            width: 95%;
-            height: 95%;
-            position: relative;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
+    .wave-top,
+    .wave-bottom {
+      position: absolute;
+      width: 200%;
+      height: 200px;
+      background: linear-gradient(to right, #FCD34D, #EBA85D, #FCD34D);
+      border-radius: 100%;
+      opacity: 0.7;
+      animation: floatWave 6s ease-in-out infinite alternate;
+      z-index: 0;
+    }
 
-        .wave-top,
-        .wave-bottom {
-            position: absolute;
-            width: 200%;
-            height: 200px;
-            background: linear-gradient(to right, #FCD34D, #EBA85D, #FCD34D);
-            border-radius: 100%;
-            opacity: 0.7;
-            animation: floatWave 6s ease-in-out infinite alternate;
-            z-index: 0;
-        }
+    .wave-top {
+      top: -80px;
+      left: -100px;
+      transform: rotate(15deg);
+    }
 
-        .wave-top {
-            top: -80px;
-            left: -100px;
-            transform: rotate(15deg);
-        }
+    .wave-bottom {
+      bottom: -100px;
+      right: -100px;
+      transform: rotate(-15deg);
+    }
 
-        .wave-bottom {
-            bottom: -100px;
-            right: -100px;
-            transform: rotate(-15deg);
-        }
+    @keyframes floatWave {
+      0% {
+        transform: translateY(0) rotate(15deg);
+      }
 
-        @keyframes floatWave {
-            0% {
-                transform: translateY(0) rotate(15deg);
-            }
+      100% {
+        transform: translateY(-10px) rotate(15deg);
+      }
+    }
 
-            100% {
-                transform: translateY(-10px) rotate(15deg);
-            }
-        }
+    .logo {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+      margin-top: 4rem;
+    }
 
-        .logo {
-            position: relative;
-            z-index: 1;
-            text-align: center;
-            margin-top: 4rem;
-        }
+    .logo h1 {
+      font-size: 3rem;
+      font-weight: bold;
+      letter-spacing: 2px;
+      color: #B16D50;
+      font-family: 'Courier New', Courier, monospace;
+    }
 
-        .logo h1 {
-            font-size: 3rem;
-            font-weight: bold;
-            letter-spacing: 2px;
-            color: #B16D50;
-            font-family: 'Courier New', Courier, monospace;
-        }
+    .navbar {
+      position: relative;
+      z-index: 2;
+      width: 100%;
+      display: flex;
+      justify-content: space-around;
+      padding: 1rem 0;
+      font-weight: bold;
+      color: #6B3E2E;
+    }
 
-        .navbar {
-            position: relative;
-            z-index: 2;
-            width: 100%;
-            display: flex;
-            justify-content: space-around;
-            padding: 1rem 0;
-            font-weight: bold;
-            color: #6B3E2E;
-        }
+    .navbar a {
+      text-decoration: none;
+      color: #6B3E2E;
+      padding: 0.5rem;
+      transition: color 0.3s ease;
+    }
 
-        .navbar a {
-            text-decoration: none;
-            color: #6B3E2E;
-            padding: 0.5rem;
-            transition: color 0.3s ease;
-        }
+    .navbar a:hover {
+      color: #B16D50;
+    }
 
-        .navbar a:hover {
-            color: #B16D50;
-        }
+    .mic-button.listening {
+      animation: pulse 1.5s infinite;
+    }
 
-        .mic-button.listening {
-            animation: pulse 1.5s infinite;
-        }
+    @keyframes pulse {
+      0% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+      }
 
-        @keyframes pulse {
-            0% {
-                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
-            }
+      70% {
+        box-shadow: 0 0 0 25px rgba(239, 68, 68, 0);
+      }
+    }
 
-            70% {
-                box-shadow: 0 0 0 25px rgba(239, 68, 68, 0);
-            }
-        }
+    .mic-container {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+    }
 
-        .mic-container {
-            position: absolute;
-            bottom: 20px;
-            right: 20px;
-            z-index: 2;
-            display: flex;
-            flex-direction: column;
-            align-items: flex-end;
-        }
+    .status-box {
+      background-color: rgba(0, 0, 0, 0.6);
+      color: white;
+      border-radius: 0.75rem;
+      padding: 1rem;
+      margin-bottom: 0.5rem;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
 
-        .status-box {
-            background-color: rgba(0, 0, 0, 0.6);
-            color: white;
-            border-radius: 0.75rem;
-            padding: 1rem;
-            margin-bottom: 0.5rem;
-            opacity: 0;
-            transition: opacity 0.3s;
-        }
-
-        .status-box.visible {
-            opacity: 1;
-        }
-    </style>
+    .status-box.visible {
+      opacity: 1;
+    }
+  </style>
 </head>
 
 <body>
-    <div class="container">
-        <!-- Waves -->
-        <div class="wave-top"></div>
-        <div class="wave-bottom"></div>
+  <div class="container">
+    <!-- Waves -->
+    <div class="wave-top"></div>
+    <div class="wave-bottom"></div>
 
-        <!-- Navigation -->
-        <nav class="navbar">
-            <a href="home.html">Home</a>
-            <a href="games/dino.html">Games</a>
-            <a href="songs.html">Songs</a>
-            <a href="settings.html">Settings</a>
-        </nav>
+    <!-- Navigation -->
+    <nav class="navbar">
+      <a href="home.html">Home</a>
+      <a href="games/dino.html">Games</a>
+      <a href="songs.html">Songs</a>
+      <a href="settings.html">Settings</a>
+    </nav>
 
-        <!-- Title -->
-        <div class="logo">
-            <h1 class="text-orange-500 font-semibold">Wellness Coach 🧘</h1>
-        </div>
-
-        <!-- Status -->
-        <div class="mt-10 relative z-10 text-center">
-            <p id="command-output" class="text-sm text-gray-500 mt-1"></p>
-        </div>
-
-        <!-- Mic Button -->
-        <div class="mic-container">
-            <div id="status-box" class="status-box">
-                <p id="status" class="font-semibold">Listening...</p>
-                <p id="cmd-output" class="text-pink-400 text-sm mt-1">-</p>
-            </div>
-            <button id="mic-button"
-                class="mic-button bg-red-500 hover:bg-red-600 text-white w-16 h-16 rounded-full shadow-lg flex items-center justify-center">
-                <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M7 4a3 3 0 016 0v6a3 3 0 11-6 0V4z" />
-                </svg>
-            </button>
-        </div>
+    <!-- Title -->
+    <div class="logo">
+      <h1 class="text-orange-500 font-semibold">Wellness Coach 🧘</h1>
     </div>
 
-    <script>
-        const socket = io();
-        const micButton = document.getElementById('mic-button');
-        const statusBox = document.getElementById('status-box');
-        const status = document.getElementById('status');
-        const cmdOutput = document.getElementById('cmd-output');
+    <!-- Status -->
+    <div class="mt-10 relative z-10 text-center">
+      <p id="command-output" class="text-sm text-gray-500 mt-1"></p>
+    </div>
 
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        let recognition, isListening = false;
+    <!-- Mic Button -->
+    <div class="mic-container">
+      <div id="status-box" class="status-box">
+        <p id="status" class="font-semibold">Listening...</p>
+        <p id="cmd-output" class="text-pink-400 text-sm mt-1">-</p>
+      </div>
+      <button id="mic-button"
+        class="mic-button bg-red-500 hover:bg-red-600 text-white w-16 h-16 rounded-full shadow-lg flex items-center justify-center">
+        <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
+          <path d="M7 4a3 3 0 016 0v6a3 3 0 11-6 0V4z" />
+        </svg>
+      </button>
+    </div>
+  </div>
 
-        if (SpeechRecognition) {
-            recognition = new SpeechRecognition();
-            recognition.lang = 'en-US';
-            recognition.continuous = false;
+  <script>
+    const socket = io();
+    const micButton = document.getElementById('mic-button');
+    const statusBox = document.getElementById('status-box');
+    const status = document.getElementById('status');
+    const cmdOutput = document.getElementById('cmd-output');
 
-            recognition.onstart = () => {
-                isListening = true;
-                micButton.classList.add('listening');
-                statusBox.classList.add('visible');
-                status.textContent = 'Listening...';
-            };
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    let recognition, isListening = false;
 
-            recognition.onend = () => {
-                isListening = false;
-                micButton.classList.remove('listening');
-                statusBox.classList.remove('visible');
-            };
+    // Track breathing interval
+    let breathingTimer = null;
 
-            recognition.onresult = (e) => {
-                const command = e.results[0][0].transcript.trim().toLowerCase();
-                cmdOutput.textContent = `"${command}"`;
-                socket.emit('voice-command', command);
-            };
+    if (SpeechRecognition) {
+      recognition = new SpeechRecognition();
+      recognition.lang = 'en-US';
+      recognition.continuous = false;
+
+      recognition.onstart = () => {
+        isListening = true;
+        micButton.classList.add('listening');
+        statusBox.classList.add('visible');
+        status.textContent = 'Listening...';
+      };
+
+      recognition.onend = () => {
+        isListening = false;
+        micButton.classList.remove('listening');
+        statusBox.classList.remove('visible');
+      };
+
+      recognition.onresult = (e) => {
+        const command = e.results[0][0].transcript.trim().toLowerCase();
+        cmdOutput.textContent = `"${command}"`;
+        socket.emit('voice-command', command);
+
+        // ✅ Handle "stop" command locally
+        if (command.includes("stop")) {
+          if (breathingTimer) {
+            clearInterval(breathingTimer);
+            breathingTimer = null;
+            speechSynthesis.cancel();
+            status.textContent = "Exercise stopped ⏹️";
+            cmdOutput.textContent = "";
+          }
+        }
+      };
+    }
+
+    micButton.addEventListener('click', () => {
+      if (!recognition) return;
+      isListening ? recognition.stop() : recognition.start();
+    });
+
+    // ✅ Breathing exercise logic
+    socket.on('execute-action', (data) => {
+      if (data.type === 'START_BREATHING_EXERCISE') {
+        const inhaleText = "Breathe in";
+        const exhaleText = "Breathe out";
+        const doneText = "Breathing exercise complete. Well done!";
+
+        let interval = 5000; // 5 seconds
+        let duration = data.payload.duration * 60 * 1000;
+        let elapsed = 0;
+        let isInhale = true;
+
+        function speak(text) {
+          const utterance = new SpeechSynthesisUtterance(text);
+          speechSynthesis.cancel();
+          speechSynthesis.speak(utterance);
         }
 
-        micButton.addEventListener('click', () => {
-            if (!recognition) return;
-            isListening ? recognition.stop() : recognition.start();
-        });
+        // clear old timer if running
+        if (breathingTimer) clearInterval(breathingTimer);
 
-        socket.on('execute-action', (data) => {
-            if (data.type === 'SHOW_BREATHING') {
-                const inhaleText = "Breathe in";
-                const exhaleText = "Breathe out";
-                const doneText = "Breathing exercise complete. Well done!";
+        speak(inhaleText);
+        status.textContent = inhaleText;
+        cmdOutput.textContent = "🌬️";
 
-                let inhaleTime = 4000;  // 4 seconds 
-                let exhaleTime = 4000;  // 4 seconds 
-                let pauseTime = 5000;   // 5 seconds 
-                let cycles = Math.floor((data.payload.duration * 60 * 1000) / (inhaleTime + pauseTime + exhaleTime));
-                let cycleCount = 0;
+        breathingTimer = setInterval(() => {
+          elapsed += interval;
+          if (elapsed >= duration) {
+            clearInterval(breathingTimer);
+            breathingTimer = null;
+            speak(doneText);
+            status.textContent = doneText;
+            cmdOutput.textContent = "";
+            return;
+          }
 
-                function speak(text) {
-                    const utterance = new SpeechSynthesisUtterance(text);
-                    speechSynthesis.speak(utterance);
-                }
+          if (isInhale) {
+            speak(exhaleText);
+            status.textContent = exhaleText;
+            cmdOutput.textContent = "😌";
+          } else {
+            speak(inhaleText);
+            status.textContent = inhaleText;
+            cmdOutput.textContent = "🌬️";
+          }
+          isInhale = !isInhale;
+        }, interval);
+      }
+    });
 
-                function guideBreathing() {
-                    if (cycleCount >= cycles) {
-                        speak(doneText);
-                        status.textContent = doneText;
-                        cmdOutput.textContent = "";
-                        return;
-                    }
+    socket.on('feedback', (data) => {
+      alert(data.message);
+    });
 
-                    // Step 1: Inhale
-                    status.textContent = inhaleText;
-                    cmdOutput.textContent = "🌬️";
-                    speak(inhaleText);
+    // Welcome message + auto-listen
+    window.addEventListener('load', () => {
+      const speakText = new SpeechSynthesisUtterance("Welcome to well-ness coach.");
+      speechSynthesis.speak(speakText);
 
-                    setTimeout(() => {
-                        // Step 2: Pause
-                        status.textContent = "Hold...";
-                        cmdOutput.textContent = "⏸️";
-
-                        setTimeout(() => {
-                            // Step 3: Exhale
-                            status.textContent = exhaleText;
-                            cmdOutput.textContent = "😌";
-                            speak(exhaleText);
-
-                            cycleCount++;
-                            setTimeout(guideBreathing, 500);
-                        }, pauseTime);
-
-                    }, inhaleTime);
-                }
-
-                guideBreathing();
-            }
-        });
-
-        socket.on('feedback', (data) => {
-            alert(data.message);
-        });
-
-        // Welcome message + auto-listen
-        window.addEventListener('load', () => {
-            const speakText = new SpeechSynthesisUtterance("Welcome to well-ness coach.");
-            speechSynthesis.speak(speakText);
-
-            speakText.onend = () => {
-                if (recognition && !isListening) {
-                    recognition.start();
-                }
-            };
-        });
-    </script>
+      speakText.onend = () => {
+        if (recognition && !isListening) {
+          recognition.start();
+        }
+      };
+    });
+  </script>
 </body>
 </html>

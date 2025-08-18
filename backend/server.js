@@ -281,7 +281,7 @@ io.on('connection', (socket) => {
       return;
     }
 
-    // 🌿 Personal Well-being Coach
+    // 🌿 Personal Wellness Coach
     if (cmd.includes('open wellness page') || cmd.includes('go to wellness')) {
       // If you’re sending back a URL for frontend navigation
       socket.emit('execute-action', { type: 'REDIRECT', payload: { url: 'wellness.html' } });
@@ -289,8 +289,18 @@ io.on('connection', (socket) => {
     }
 
     if (cmd.includes('start') && cmd.includes('breathing exercise')) {
-      socket.emit('feedback', { message: '🧘 Starting breathing exercise. Focus on your breath...'});
+      socket.emit('feedback', { message: '🧘 Starting breathing exercise. Focus on your breath...' });
       socket.emit('execute-action', { type: 'START_BREATHING_EXERCISE', payload: { duration: 5 } });
+      return;
+    }
+
+    if (cmd.includes('start') && cmd.includes('breathing exercise')) {
+      let duration = 2; 
+      const match = cmd.match(/(\d+)\s*(minute|min|mins)/);
+      if (match) duration = parseInt(match[1]);
+
+      socket.emit('feedback', { message: `🧘 Starting breathing exercise for ${duration} minutes. Focus on your breath...` });
+      socket.emit('execute-action', { type: 'START_BREATHING_EXERCISE', payload: { duration } });
       return;
     }
 
@@ -316,8 +326,6 @@ io.on('connection', (socket) => {
       setTimeout(() => speak("Breathe out..."), 12000);
       // repeat as needed for 5 minutes
     }
-
-
 
     // ❓ Unknown
     socket.emit('feedback', { message: `❓ Unknown command: "${command}"` });
