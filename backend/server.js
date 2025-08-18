@@ -197,6 +197,34 @@ io.on('connection', (socket) => {
     if (cmd.includes('home')) { socket.emit('execute-action', { type: 'REDIRECT', payload: { url: 'home.html' } }); return; }
     if (cmd.includes('mood history')) { socket.emit('execute-action', { type: 'REDIRECT', payload: { url: 'history.html' } }); return; }
 
+
+    //Medicine Tracker
+    app.post('/api/add-medicine', async (req, res) => {
+      const { name, dosage, time, date } = req.body;
+
+      if (!name || !time || !date) {
+        return res.json({ message: "Please fill in all required fields" });
+      }
+
+      try {
+        // Example for SQLite/MySQL
+        db.run(
+          "INSERT INTO medicines (name, dosage, time, date) VALUES (?, ?, ?, ?)",
+          [name, dosage, time, date],
+          function (err) {
+            if (err) {
+              console.error(err);
+              return res.json({ message: "Database error" });
+            }
+            res.json({ message: "Medicine added successfully" });
+          }
+        );
+      } catch (err) {
+        console.error(err);
+        res.json({ message: "Server error" });
+      }
+    });
+
     // ✅ Medicine Tracker 
     if (cmd.includes('medicine tracker') || cmd.includes('show me medicine tracker') || cmd.includes('go to medicine tracker')) {
       socket.emit('execute-action', { type: 'REDIRECT', payload: { url: 'medicine.html' } });
@@ -261,7 +289,7 @@ io.on('connection', (socket) => {
     }
 
     if (cmd.includes('start') && cmd.includes('breathing exercise')) {
-      socket.emit('feedback', { message: '🧘 Starting a 5-minute guided breathing exercise. Focus on your breath...' });
+      socket.emit('feedback', { message: '🧘 Starting breathing exercise. Focus on your breath...'});
       socket.emit('execute-action', { type: 'START_BREATHING_EXERCISE', payload: { duration: 5 } });
       return;
     }
