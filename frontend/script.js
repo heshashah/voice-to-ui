@@ -1,6 +1,20 @@
 // Constants
+const socket = io();
 const allowedEmail = "hesha@gmail.com";
 const allowedPassword = "hesha123";
+
+// Speech recognition and listening status
+let recognition;
+let isListening = false;
+
+// Speak helper function
+function speak(text) {
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.rate = 1;  // speaking speed
+  utterance.pitch = 1; // pitch
+  utterance.volume = 1; // volume
+  speechSynthesis.speak(utterance);
+}
 
 // Helper: Get cookie by name
 function getCookie(name) {
@@ -57,7 +71,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Optional: Handle voice commands
+  // Setup voice commands after DOM is ready
   setupVoiceCommands();
 });
 
@@ -67,22 +81,59 @@ function submitUserData(userId) {
   window.location.href = "/mood.html"; // redirect to main page after login
 }
 
-// Voice commands (basic example)
+// Breathing exercise with customizable duration in minutes
+function startBreathingExercise(durationMinutes = 1) {
+  const phrases = [
+    "Breathe in",
+    "Breathe out",
+    "Think about positive things"
+  ];
+
+  let elapsed = 0;
+  const intervalMs = 4000; // 4 seconds per phrase
+  const totalPhrases = Math.ceil((durationMinutes * 60 * 1000) / intervalMs);
+
+  speak(`Starting a ${durationMinutes} minute guided breathing exercise. Focus on your breath.`);
+
+  const interval = setInterval(() => {
+    const phrase = phrases[elapsed % phrases.length];
+    speak(phrase);
+    elapsed++;
+
+    if (elapsed >= totalPhrases) {
+      clearInterval(interval);
+      speak("Breathing exercise completed. Well done.");
+    }
+  }, intervalMs);
+}
+
+// Setup voice recognition commands
 function setupVoiceCommands() {
   if (!("webkitSpeechRecognition" in window)) {
     console.warn("Speech recognition not supported");
     return;
   }
 
-  const recognition = new webkitSpeechRecognition();
+  recognition = new webkitSpeechRecognition();
   recognition.continuous = false;
   recognition.lang = "en-US";
   recognition.interimResults = false;
 
-  // Trigger voice recognition on some button or condition
   document.getElementById("voiceBtn")?.addEventListener("click", () => {
-    recognition.start();
+    if (!isListening) {
+      recognition.start();
+    }
   });
+
+  recognition.onstart = () => {
+    isListening = true;
+    console.log("Voice recognition started");
+  };
+
+  recognition.onend = () => {
+    isListening = false;
+    console.log("Voice recognition ended");
+  };
 
   recognition.onresult = function (event) {
     const command = event.results[0][0].transcript.toLowerCase();
@@ -95,6 +146,11 @@ function setupVoiceCommands() {
     } else if (command.includes("logout")) {
       document.cookie = "userId=; path=/; max-age=0";
       window.location.href = "/index.html";
+    } else if (command.includes("open wellness page") || command.includes("go to wellness")) {
+      window.location.href = "/wellness.html";
+    } else if (command.includes("start breathing exercise")) {
+      // You can parse duration from command if needed, default to 1
+      startBreathingExercise(1);
     } else {
       alert("Command not recognized");
     }
@@ -104,53 +160,35 @@ function setupVoiceCommands() {
     console.error("Speech recognition error:", event.error);
   };
 }
-// 🎯 Medicine Tracker Navigation
-// if (cmd.includes('medicine tracker') || cmd.includes('show me medicine')) {
-//   socket.emit('execute-action', { type: 'REDIRECT', payload: { url: 'medicine.html' } });
-//   return;
-// }
-// // 🎯 Medicine Tracker Navigation
-// if (cmd.includes('medicine tracker') || cmd.includes('show me medicine')) {
-//   socket.emit('execute-action', { type: 'REDIRECT', payload: { url: 'medicine.html' } });
-//   return;
-// }
-// // ✅ Add Medicine Command
-// if (cmd.startsWith('add')) {
-//   const medicineMatch = cmd.match(/add (.+) at (\d{1,2}(?::\d{2})?\s?(?:am|pm)?) on (\w+)\s+(\d{1,2})/i);
 
-//   if (medicineMatch) {
-//     const [, medicine, time, monthName, day] = medicineMatch;
-//     const month = monthMap[monthName.toLowerCase()];
-//     const currentYear = new Date().getFullYear();
-//     const date = `${currentYear}-${month}-${String(day).padStart(2, '0')}`;
+// Listen for server-triggered actions
+socket.on('execute-action', (action) => {
+  console.log('Action received from server:', action);
 
-//     db.query(
-//       `INSERT INTO medicines (name, time, date) VALUES (?, ?, ?)`,
-//       [medicine.trim(), time.trim(), date],
-//       (err) => {
-//         if (err) {
-//           console.error('❌ Error inserting medicine:', err);
-//           socket.emit('feedback', { message: '❌ Failed to save medicine.' });
-//         } else {
-//           socket.emit('feedback', { message: `💊 Medicine "${medicine}" scheduled at ${time} on ${date}` });
-//           socket.emit('execute-action', { type: 'ADD_MEDICINE', payload: { name: medicine, time, date } });
-//         }
-//       }
-//     );
-//   } else {
-//     socket.emit('feedback', { message: `❌ Could not parse medicine command: "${command}"` });
-//   }
-//   return;
-  
-// }
-window.addEventListener('load', () => {
-    // 👄 Speak "Add medicines"
-    const speakText = new SpeechSynthesisUtterance("Add medicines");
-    speechSynthesis.speak(speakText);
+  if (action.type === 'START_BREATHING_EXERCISE') {
+    alert(`🧘 Starting a ${action.payload.duration}-minute guided breathing exercise...`);
+    startBreathingExercise(action.payload.duration);
+  }
 
-    // 🎤 Automatically start recognition
-    if (recognition && !isListening) {
-        recognition.start();
+  if (action.type === 'PROMPT_FEELING') {
+    const feeling = prompt("How are you feeling today?");
+    if (feeling) {
+      socket.emit('log-feeling', { feeling, date: new Date().toISOString().split('T')[0] });
     }
+  }
+
+  if (action.type === 'SHOW_EXERCISES') {
+    alert("🏋️ Here are some gentle back stretches:\n1. Cat-Cow Stretch\n2. Child’s Pose\n3. Seated Forward Bend");
+  }
 });
 
+window.addEventListener('load', () => {
+  // Speak "Add medicines" on page load
+  const speakText = new SpeechSynthesisUtterance("Add medicines");
+  speechSynthesis.speak(speakText);
+
+  // Start recognition automatically if supported and not already listening
+  if (recognition && !isListening) {
+    recognition.start();
+  }
+});
