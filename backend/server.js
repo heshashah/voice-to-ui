@@ -281,7 +281,7 @@ io.on('connection', (socket) => {
       return;
     }
 
-    // 🌿 Personal Wellness Coach
+    // 🌿 Wellness Coach - medition 
     if (cmd.includes('open wellness page') || cmd.includes('go to wellness')) {
       // If you’re sending back a URL for frontend navigation
       socket.emit('execute-action', { type: 'REDIRECT', payload: { url: 'wellness.html' } });
@@ -295,7 +295,7 @@ io.on('connection', (socket) => {
     }
 
     if (cmd.includes('start') && cmd.includes('breathing exercise')) {
-      let duration = 2; 
+      let duration = 2;
       const match = cmd.match(/(\d+)\s*(minute|min|mins)/);
       if (match) duration = parseInt(match[1]);
 
@@ -325,6 +325,40 @@ io.on('connection', (socket) => {
       setTimeout(() => speak("Breathe in..."), 8000);
       setTimeout(() => speak("Breathe out..."), 12000);
       // repeat as needed for 5 minutes
+    }
+
+    // 🍃 Wellness Coach - Relief feature 
+    if (cmd.includes("i have a back pain")) {
+      socket.emit('feedback', { message: "💡 I suggest 3 exercises: Bridge Pose, Bird Dog, or cat-cow pose. Please say which one you'd like to start." });
+      socket.emit('execute-action', { type: 'SUGGEST_BACK_EXERCISES' });
+      return;
+    }
+
+    if (cmd.includes("start bridge pose")) {
+      const instructions = "To perform the pose, lie on your back with feet flat on the floor, knees bent and hip-width apart, and lift your hips towards the ceiling, interlace your fingers underneath your body, and hold the pose while breathing deeply. It's important to keep your chin tucked slightly towards your chest, avoid any pain or discomfort during the pose, and gently lower the hips back to the floor, vertebra by vertebra, when releasing.";
+      socket.emit('execute-action', {
+        type: 'START_RELIEF_EXERCISE',
+        payload: { exercise: "Bridge Pose", instructions }
+      });
+      return;
+    }
+
+    if (cmd.includes("start bird dog")) {
+      const instructions = "To perfrom bird dog, Draw your shoulder blades together. Raise your right arm and left leg, keeping your shoulders and hips parallel to the floor. Lengthen the back of your neck and tuck your chin into your chest to gaze down at the floor. Hold this position for a few seconds, then lower back down to the starting position.";
+      socket.emit('execute-action', {
+        type: 'START_RELIEF_EXERCISE',
+        payload: { exercise: "Bird Dog", instructions }
+      });
+      return;
+    }
+
+    if (cmd.includes("start cat cow")) {
+      const instructions = "The cat-cow pose gently massages the spine and stretches your back. Start on your hands and knees in tabletop position. Inhale as you drop your belly and lift your head and tailbone for cow pose. Exhale as you round your back towards the ceiling for cat pose. Continue moving slowly with your breath.";
+      socket.emit('execute-action', {
+        type: 'START_RELIEF_EXERCISE',
+        payload: { exercise: "Cat-Cow Pose", instructions }
+      });
+      return;
     }
 
     // ❓ Unknown

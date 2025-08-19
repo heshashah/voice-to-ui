@@ -190,8 +190,9 @@
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     let recognition, isListening = false;
 
-    // Track breathing interval
+    // Track exercise intervals
     let breathingTimer = null;
+    let reliefTimer = null;
 
     if (SpeechRecognition) {
       recognition = new SpeechRecognition();
@@ -216,15 +217,19 @@
         cmdOutput.textContent = `"${command}"`;
         socket.emit('voice-command', command);
 
-        // ✅ Handle "stop" command locally
+        // ✅ Handle "stop" command locally for both exercises
         if (command.includes("stop")) {
           if (breathingTimer) {
             clearInterval(breathingTimer);
             breathingTimer = null;
-            speechSynthesis.cancel();
-            status.textContent = "Exercise stopped ⏹️";
-            cmdOutput.textContent = "";
           }
+          if (reliefTimer) {
+            clearInterval(reliefTimer);
+            reliefTimer = null;
+          }
+          speechSynthesis.cancel();
+          status.textContent = "Exercise stopped ⏹️";
+          cmdOutput.textContent = "";
         }
       };
     }
@@ -234,25 +239,25 @@
       isListening ? recognition.stop() : recognition.start();
     });
 
-    // ✅ Breathing exercise logic
+    // ✅ Handle all exercise actions
     socket.on('execute-action', (data) => {
+      function speak(text) {
+        const utterance = new SpeechSynthesisUtterance(text);
+        speechSynthesis.cancel();
+        speechSynthesis.speak(utterance);
+      }
+
+      // 🌬️ Breathing Exercise
       if (data.type === 'START_BREATHING_EXERCISE') {
         const inhaleText = "Breathe in";
         const exhaleText = "Breathe out";
         const doneText = "Breathing exercise complete. Well done!";
 
-        let interval = 5000; // 5 seconds
+        let interval = 10000; // 10 seconds
         let duration = data.payload.duration * 60 * 1000;
         let elapsed = 0;
         let isInhale = true;
 
-        function speak(text) {
-          const utterance = new SpeechSynthesisUtterance(text);
-          speechSynthesis.cancel();
-          speechSynthesis.speak(utterance);
-        }
-
-        // clear old timer if running
         if (breathingTimer) clearInterval(breathingTimer);
 
         speak(inhaleText);
@@ -282,6 +287,27 @@
           isInhale = !isInhale;
         }, interval);
       }
+
+      // 🧘 Back Relief Suggestion
+      if (data.type === 'SUGGEST_BACK_EXERCISES') {
+        status.textContent = "Choose: Knee-to-chest, Pelvic tilts, or Cat-Cow pose.";
+        cmdOutput.textContent = "🧘 Back relief options";
+      }
+
+      // 🧘 Start Relief Exercise
+      if (data.type === 'START_RELIEF_EXERCISE') {
+        const { exercise, instructions } = data.payload;
+
+        if (reliefTimer) clearInterval(reliefTimer);
+
+        speak(`Starting ${exercise}. ${instructions}`);
+        status.textContent = `Doing: ${exercise}`;
+        cmdOutput.textContent = "🔄";
+
+        reliefTimer = setInterval(() => {
+          speak(instructions);
+        }, 30000);
+      }
     });
 
     socket.on('feedback', (data) => {
@@ -301,4 +327,5 @@
     });
   </script>
 </body>
+
 </html>
