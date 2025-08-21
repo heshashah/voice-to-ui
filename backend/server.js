@@ -34,7 +34,7 @@ db.connect((err) => {
   else console.log('✅ Connected to MySQL database');
 });
 
-// ✅ Create tables if not exists
+// ✅ Create tables
 db.query(`
   CREATE TABLE IF NOT EXISTS mood_logs (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -66,7 +66,7 @@ const monthMap = {
 
 function formatDateToDayDateYear(dateStr) {
   const dateObj = new Date(dateStr);
-  if (isNaN(dateObj)) return dateStr; // fallback if invalid
+  if (isNaN(dateObj)) return dateStr; 
   const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
   return dateObj.toLocaleDateString('en-US', options);
 }
@@ -99,14 +99,14 @@ function speak(text) {
 }
 
 
-// ===================== SOCKET =====================
+// ✅ Sockets
 io.on('connection', (socket) => {
   console.log('✅ Client connected');
 
   socket.on('voice-command', (command) => {
     const cmd = command.toLowerCase().trim();
 
-    // === ✅ Mood Logging ===
+    // ✅ Mood Logging 
     const moodMatch = cmd.match(/^i feel (.+)/);
     if (moodMatch) {
       const mood = moodMatch[1];
@@ -134,7 +134,7 @@ io.on('connection', (socket) => {
           socket.emit('execute-action', { type: 'ADD_EVENT', payload: event });
           socket.emit('feedback', { message: `✅ Event "${event.title}" added on ${event.date}` });
 
-          // ✅ 🔥 Fetch all events again and send to frontend to keep it updated
+          // ✅ Fetch all events again and send to frontend to keep it updated
           db.query(`SELECT title, date FROM calendar_events ORDER BY date ASC`, (err, rows) => {
             if (!err) socket.emit('calendar-events', rows);
           });
@@ -188,7 +188,7 @@ io.on('connection', (socket) => {
       return;
     }
 
-    // === REDIRECTIONS ===
+    // Redirections 
     if (cmd.includes('mood history')) { socket.emit('execute-action', { type: 'REDIRECT', payload: { url: 'history.html' } }); return; }
     if (cmd.includes('settings')) { socket.emit('execute-action', { type: 'REDIRECT', payload: { url: 'settings.html' } }); return; }
     if (cmd.includes('calendar')) { socket.emit('execute-action', { type: 'REDIRECT', payload: { url: 'calendar.html' } }); return; }
@@ -198,7 +198,7 @@ io.on('connection', (socket) => {
     if (cmd.includes('mood history')) { socket.emit('execute-action', { type: 'REDIRECT', payload: { url: 'history.html' } }); return; }
 
 
-    //Medicine Tracker
+    // Medicine Tracker
     app.post('/api/add-medicine', async (req, res) => {
       const { name, dosage, time, date } = req.body;
 
@@ -207,7 +207,6 @@ io.on('connection', (socket) => {
       }
 
       try {
-        // Example for SQLite/MySQL
         db.run(
           "INSERT INTO medicines (name, dosage, time, date) VALUES (?, ?, ?, ?)",
           [name, dosage, time, date],
@@ -251,7 +250,7 @@ io.on('connection', (socket) => {
           payload: { name: name.trim(), dosage: dosage || '', time: time.trim(), date }
         });
 
-        // ✅ Also insert into DB
+        // ✅ insert into DB
         db.query(
           `INSERT INTO medicines (name, dosage, time, date) VALUES (?, ?, ?, ?)`,
           [name.trim(), dosage || '', time.trim(), date],
@@ -270,8 +269,6 @@ io.on('connection', (socket) => {
                   socket.emit('medicine-data', formattedRows);
                 }
               });
-
-
             }
           }
         );
@@ -283,7 +280,6 @@ io.on('connection', (socket) => {
 
     // 🌿 Wellness Coach - medition 
     if (cmd.includes('open wellness page') || cmd.includes('go to wellness')) {
-      // If you’re sending back a URL for frontend navigation
       socket.emit('execute-action', { type: 'REDIRECT', payload: { url: 'wellness.html' } });
       return;
     }
@@ -321,10 +317,9 @@ io.on('connection', (socket) => {
 
     if (command.includes("start a 5-minute breathing exercise")) {
       speak("Let's begin. Breathe in...");
-      setTimeout(() => speak("Breathe out..."), 4000);
-      setTimeout(() => speak("Breathe in..."), 8000);
-      setTimeout(() => speak("Breathe out..."), 12000);
-      // repeat as needed for 5 minutes
+      setTimeout(() => speak("Breathe out..."), 1000);
+      setTimeout(() => speak("Breathe in..."), 1000);
+      setTimeout(() => speak("Breathe out..."), 1000);
     }
 
     // 🍃 Wellness Coach - Relief feature 
@@ -357,6 +352,40 @@ io.on('connection', (socket) => {
       socket.emit('execute-action', {
         type: 'START_RELIEF_EXERCISE',
         payload: { exercise: "Cat-Cow Pose", instructions }
+      });
+      return;
+    }
+
+    // Wellness Coach - Knee Pain Relief
+    if (cmd.includes("i have a knee pain")) {
+      socket.emit('feedback', { message: "💡 I suggest 3 exercises: Straight leg raises, Hamstring stretch, Leg extension. Please say which one you'd like to start." });
+      socket.emit('execute-action', { type: 'SUGGEST_KNEE_EXERCISES' });
+      return;
+    }
+
+    if (cmd.includes("start straight leg raises")) {
+      const instructions = "For this exercise, you can use a mat to add cushioning under your back. Lie down on the floor with one leg bent and one leg straight out in front of you. Contract the quadricep of your straight leg and slowly raise it off the floor until it’s the same height as your bent knee. Pause at the top for 5 seconds, then lower to the starting position. Do 2 to 3 sets of 10 repetitions for each leg.";
+      socket.emit('execute-action', {
+        type: 'START_RELIEF_EXERCISE',
+        payload: { exercise: "straight leg raises", instructions }
+      });
+      return;
+    }
+
+    if (cmd.includes("start hamstring stretch")) {
+      const instructions = "For this stretch, you can use a mat to add cushioning under your back. Lie down on the floor or mat and straighten both legs. Or, if it’s more comfortable, you can bend both knees with your feet flat on the floor. Lift one leg off the floor. Place your hands behind your thigh but below the knee, and gently pull your knee toward your chest until you feel a slight stretch. This shouldn’t be painful. Hold for 30 seconds. Lower and change legs. Repeat twice on each side.";
+      socket.emit('execute-action', {
+        type: 'START_RELIEF_EXERCISE',
+        payload: { exercise: "Hamstring Stretch", instructions }
+      });
+      return;
+    }
+
+    if (cmd.includes("start leg extension")) {
+      const instructions = "Sit up tall in a chair. Put your feet flat on the floor, hip-width apart. Look straight ahead, contract your thigh muscles, and extend one leg as high as possible without raising your buttocks off the chair. Pause, then lower to the starting position. Do 2 to 3 sets of 10 repetitions for each leg.";
+      socket.emit('execute-action', {
+        type: 'START_RELIEF_EXERCISE',
+        payload: { exercise: "leg extension", instructions }
       });
       return;
     }
@@ -398,7 +427,7 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => console.log('❌ Client disconnected'));
 });
 
-// ✅ CHATBOT API
+// ✅ Chatbot API
 app.post('/chat', async (req, res) => {
   try {
     const { prompt } = req.body;
@@ -413,7 +442,7 @@ app.post('/chat', async (req, res) => {
   }
 });
 
-// ✅ LOGIN API
+// ✅ Login API
 app.post('/api/login', (req, res) => {
   const { username, password } = req.body;
   db.query(`SELECT * FROM users WHERE username = ?`, [username], (err, results) => {
@@ -424,12 +453,12 @@ app.post('/api/login', (req, res) => {
   });
 });
 
-// ✅ STATIC ROUTE
+// ✅ Static routes
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'frontend', 'home.html'));
 });
 
-//MEDICINE.HTML
+// 💊Medicine Tracker
 server.listen(PORT, () => console.log(`🚀 Server running at http://localhost:${PORT}`));
 db.query(`
   CREATE TABLE IF NOT EXISTS medicines (
