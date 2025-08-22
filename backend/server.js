@@ -13,7 +13,7 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 4000;
 
 app.use(cors());
 app.use(express.json());
@@ -32,6 +32,25 @@ const db = mysql.createConnection({
 db.connect((err) => {
   if (err) console.error('❌ MySQL connection failed:', err);
   else console.log('✅ Connected to MySQL database');
+});
+
+// Route to save patient login
+app.post("/patient-login", (req, res) => {
+  const { name } = req.body;
+  const date = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+
+  const sql = "INSERT INTO patient_logins (name, login_date) VALUES (?, ?)";
+  db.query(sql, [name, date], (err, result) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).send("❌ Failed to save login");
+    }
+    res.send("✅ Patient login saved");
+  });
+});
+
+app.listen(4000, () => {
+  console.log("🚀 Server running on http://localhost:3000");
 });
 
 // ✅ Create tables

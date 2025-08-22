@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Login</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      margin: 0;
+      background-color: #DDAF8C;
+      font-family: 'Segoe UI', sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .container {
+      background-color: #FDF1D4;
+      border-radius: 40px;
+      width: 95%;
+      height: 95%;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 1.5rem;
+    }
+    .wave-top, .wave-bottom {
+      position: absolute;
+      width: 200%;
+      height: 200px;
+      background: linear-gradient(to right, #FCD34D, #EBA85D, #FCD34D);
+      border-radius: 100%;
+      opacity: 0.7;
+      animation: floatWave 6s ease-in-out infinite alternate;
+      z-index: 0;
+    }
+    .wave-top { top: -80px; left: -100px; transform: rotate(15deg); }
+    .wave-bottom { bottom: -100px; right: -100px; transform: rotate(-15deg); }
+    @keyframes floatWave {
+      0% { transform: translateY(0) rotate(15deg); }
+      100% { transform: translateY(-10px) rotate(15deg); }
+    }
+    .form-box {
+      background: white;
+      border-radius: 1rem;
+      padding: 1.5rem;
+      margin-top: 2rem;
+      width: 320px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      z-index: 1;
+      text-align: center;
+    }
+    .logo {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+      margin-top: 2rem;
+    }
+    .logo h1 {
+      font-size: 3rem;
+      font-weight: bold;
+      letter-spacing: 2px;
+      color: #B16D50;
+      font-family: 'Courier New', Courier, monospace;
+    }
+    .hidden { display: none; }
+
+    .role-btn {
+      color: #B16D50;
+      font-family: 'Courier New', Courier, monospace;
+      font-weight: bold;
+      font-size: 1.1rem;
+      padding: 0.5rem 1.5rem;
+      border-radius: 0.5rem;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      transition: all 0.2s ease-in-out;
+    }
+    .role-btn:hover {
+      background-color: #E3C9AF;
+      transform: translateY(-2px);
+    }
+
+    .form-title {
+      font-family: 'Courier New', Courier, monospace;
+      font-weight: bold;
+      font-size: 1.5rem;
+      color: #B16D50;
+      margin-bottom: 1rem;
+    }
+
+    .login-btn {
+      color: #B16D50;
+      font-family: 'Courier New', Courier, monospace;
+      font-weight: bold;
+      font-size: 1.2rem;
+      width: 100%;
+      padding: 0.75rem;
+      border-radius: 0.5rem;
+      transition: all 0.2s ease-in-out;
+    }
+    .login-btn:hover {
+      background-color: #E3C9AF;
+      transform: translateY(-2px);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="wave-top"></div>
+    <div class="wave-bottom"></div>
+
+    <div class="logo">
+      <h1>Voice-Therapy-Coach!</h1>
+    </div>
+
+    <div class="flex gap-6 mt-6 z-10">
+      <button onclick="showForm('patient')" class="role-btn">Patient</button>
+      <button onclick="showForm('doctor')" class="role-btn">Doctor</button>
+    </div>
+
+    <!-- Patient Form -->
+    <div id="patientForm" class="form-box hidden">
+      <h3 class="form-title">Patient Login</h3>
+      <form onsubmit="loginPatient(event)" class="space-y-3">
+        <input type="text" id="patientName" placeholder="Name" required class="w-full border p-2 rounded">
+        <input type="number" id="patientAge" placeholder="Age" required class="w-full border p-2 rounded">
+        <input type="text" id="patientGender" placeholder="Gender" required class="w-full border p-2 rounded">
+        <input type="tel" id="patientMobile" placeholder="Mobile Number" required class="w-full border p-2 rounded">
+        <button type="submit" class="login-btn">Login</button>
+      </form>
+    </div>
+
+    <!-- Doctor Form -->
+    <div id="doctorForm" class="form-box hidden">
+      <h3 class="form-title">Doctor Login</h3>
+      <form onsubmit="loginDoctor(event)" class="space-y-3">
+        <input type="text" id="doctorName" placeholder="Name" required class="w-full border p-2 rounded">
+        <input type="text" id="doctorQualification" placeholder="Qualification" required class="w-full border p-2 rounded">
+        <input type="text" id="doctorSpeciality" placeholder="Speciality" required class="w-full border p-2 rounded">
+        <button type="submit" class="login-btn">Login</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    function showForm(role) {
+      document.getElementById("patientForm").classList.add("hidden");
+      document.getElementById("doctorForm").classList.add("hidden");
+      if (role === "patient") {
+        document.getElementById("patientForm").classList.remove("hidden");
+      } else if (role === "doctor") {
+        document.getElementById("doctorForm").classList.remove("hidden");
+      }
+    }
+
+    function loginPatient(event) {
+      event.preventDefault();
+      const name = document.getElementById("patientName").value;
+      const age = document.getElementById("patientAge").value;
+      const gender = document.getElementById("patientGender").value;
+      const mobile = document.getElementById("patientMobile").value;
+
+      sessionStorage.setItem("userRole", "patient");
+      sessionStorage.setItem("userName", name);
+
+      // send to backend (name + current date)
+      fetch("http://localhost:3000/patient-login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name })
+      })
+      .then(res => res.text())
+      .then(data => console.log("DB response:", data))
+      .catch(err => console.error("DB error:", err));
+
+      window.location.href = "home.html";
+    }
+
+    function loginDoctor(event) {
+      event.preventDefault();
+      const name = document.getElementById("doctorName").value;
+      const qualification = document.getElementById("doctorQualification").value;
+      const speciality = document.getElementById("doctorSpeciality").value;
+
+      sessionStorage.setItem("userRole", "doctor");
+      sessionStorage.setItem("userName", name);
+      sessionStorage.setItem("doctorQualification", qualification);
+      sessionStorage.setItem("doctorSpeciality", speciality);
+
+      // send to backend (name + qualification + speciality + date)
+      fetch("http://localhost:3000/doctor-login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, qualification, speciality })
+      })
+      .then(res => res.text())
+      .then(data => console.log("DB response:", data))
+      .catch(err => console.error("DB error:", err));
+
+      window.location.href = "doctor/doctorHome.html";
+    }
+  </script>
+</body>
+</html>
