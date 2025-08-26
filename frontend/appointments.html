@@ -27,49 +27,8 @@
       align-items: center;
       padding: 1.5rem;
     }
-    .wave-top, .wave-bottom {
-      position: absolute;
-      width: 200%;
-      height: 200px;
-      background: linear-gradient(to right, #FCD34D, #EBA85D, #FCD34D);
-      border-radius: 100%;
-      opacity: 0.7;
-      animation: floatWave 6s ease-in-out infinite alternate;
-      z-index: 0;
-    }
-    .wave-top { top: -80px; left: -100px; transform: rotate(15deg); }
-    .wave-bottom { bottom: -100px; right: -100px; transform: rotate(-15deg); }
-    @keyframes floatWave {
-      0% { transform: translateY(0) rotate(15deg); }
-      100% { transform: translateY(-10px) rotate(15deg); }
-    }
-    .appointments-box {
-      /* background: white; */
-      border-radius: 1rem;
-      padding: 1.5rem;
-      margin-top: 2rem;
-      width: 360px;
-      /* box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); */
-      z-index: 1;
-      text-align: center;
-    }
-    .appointments-box h2 {
-      font-family: 'Courier New', Courier, monospace;
-      font-weight: bold;
-      font-size: 1.8rem;
-      color: #B16D50;
-      margin-bottom: 1rem;
-    }
-    .appointment-item {
-      padding: 0.75rem;
-      background: #f9f9f9;
-      border-radius: 0.5rem;
-      font-family: 'Courier New', Courier, monospace;
-      color: #333;
-      text-align: left;
-    }
 
-    /* .navbar {
+    .navbar {
       position: relative;
       z-index: 2;
       width: 100%;
@@ -89,9 +48,47 @@
 
     .navbar a:hover {
       color: #B16D50;
-    } */
+    }
 
-
+    .wave-top, .wave-bottom {
+      position: absolute;
+      width: 200%;
+      height: 200px;
+      background: linear-gradient(to right, #FCD34D, #EBA85D, #FCD34D);
+      border-radius: 100%;
+      opacity: 0.7;
+      animation: floatWave 6s ease-in-out infinite alternate;
+      z-index: 0;
+    }
+    .wave-top { top: -80px; left: -100px; transform: rotate(15deg); }
+    .wave-bottom { bottom: -100px; right: -100px; transform: rotate(-15deg); }
+    @keyframes floatWave {
+      0% { transform: translateY(0) rotate(15deg); }
+      100% { transform: translateY(-10px) rotate(15deg); }
+    }
+    .appointments-box {
+      border-radius: 1rem;
+      padding: 1.5rem;
+      margin-top: 2rem;
+      width: 360px;
+      z-index: 1;
+      text-align: center;
+    }
+    .appointments-box h2 {
+      font-family: 'Courier New', Courier, monospace;
+      font-weight: bold;
+      font-size: 1.8rem;
+      color: #B16D50;
+      margin-bottom: 1rem;
+    }
+    .appointment-item {
+      padding: 0.75rem;
+      background: #f9f9f9;
+      border-radius: 0.5rem;
+      font-family: 'Courier New', Courier, monospace;
+      color: #333;
+      text-align: left;
+    }
     .mic-button.listening { animation: pulse 1.5s infinite; }
     @keyframes pulse {
       0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
@@ -124,15 +121,15 @@
     <div class="wave-top"></div>
     <div class="wave-bottom"></div>
 
-    <!-- <nav class="navbar">
+     <nav class="navbar">
       <a href="home.html">Home</a>
       <a href="games/dino.html">Games</a>
       <a href="songs.html">Songs</a>
       <a href="settings.html">Settings</a>
-    </nav> -->
+    </nav>
 
     <div class="appointments-box">
-      <h2>Appointments</h2>
+      <h2>Appointments 📓</h2>
       <ul id="appointmentList" class="space-y-2"></ul>
     </div>
 
@@ -152,7 +149,7 @@
   </div>
 
   <script>
-    // Match backend port (default 3000, change if needed)
+    // Connect to backend (adjust port if needed)
     const socket = io("http://localhost:3000");  
     const patientName = sessionStorage.getItem("userName") || "Patient";
 
@@ -162,7 +159,7 @@
     const output = document.getElementById('command-output');
     const listEl = document.getElementById('appointmentList');
 
-    // Helper function to add/update appointment in UI ---
+    // Add appointment in UI
     function addAppointmentToUI(appt) {
       if (appt.patientName !== patientName) return;
 
@@ -181,17 +178,7 @@
       `;
     }
 
-    function login() {
-    const name = document.getElementById("nameInput").value.trim();
-    if (name) {
-      sessionStorage.setItem("userName", name);  
-      window.location.href = "appointments.html"; 
-    } else {
-      alert("Please enter your name");
-    }
-  }
-
-    // Realtime socket listeners 
+    // Realtime listeners
     socket.on("appointmentBooked", addAppointmentToUI);
     socket.on("newAppointment", addAppointmentToUI);
     socket.on("appointmentUpdated", addAppointmentToUI);
@@ -203,7 +190,7 @@
       setTimeout(() => statusBox.classList.remove('visible'), 5000);
     });
 
-    // Voice Recognition Setup
+    // Voice Recognition
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     let recognition, isListening = false;
 
@@ -233,14 +220,28 @@
         const command = e.results[0][0].transcript.trim().toLowerCase();
         output.textContent = `"${command}"`;
 
-        // If user says "book appointment"
+        // 🔹 Book appointment
         if (command.includes("book")) {
           const match = command.match(/(?:for|at)\s+(\d{1,2}(?::\d{2})?\s?(am|pm))/i);
           const dateTime = match ? match[1].replace(/\s+/g, ' ').toLowerCase() : "unspecified";
 
-          // Send booking request
           socket.emit("bookAppointment", { patientName, dateTime });
-        } else {
+        } 
+        // 🔹 Navigation commands
+        else if (command.includes("go home")) {
+          window.location.href = "home.html";
+        } 
+        else if (command.includes("go games")) {
+          window.location.href = "games/dino.html";
+        } 
+        else if (command.includes("go songs")) {
+          window.location.href = "songs.html";
+        } 
+        else if (command.includes("go settings")) {
+          window.location.href = "settings.html";
+        }
+        // 🔹 Other commands
+        else {
           socket.emit("voiceCommand", { patientName, command });
         }
       };
