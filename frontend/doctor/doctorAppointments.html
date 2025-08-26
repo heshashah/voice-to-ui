@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Doctor Appointments</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+</head>
+<body class="bg-[#FDF1D4] font-['Courier_New'] flex items-center justify-center h-screen">
+  <div class="bg-white p-6 rounded-xl shadow-lg w-96">
+    <h2 class="text-2xl font-bold text-[#B16D50] mb-4">Patient Requests</h2>
+    <button onclick="startVoice()" class="mb-4 bg-[#E3C9AF] px-4 py-2 rounded">🎤 Speak</button>
+    <ul id="doctorAppointments" class="space-y-2"></ul>
+  </div>
+
+  <script>
+    const socket = io("http://localhost:3000");
+
+    function startVoice() {
+      const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+      recognition.start();
+      recognition.onresult = (event) => {
+        const command = event.results[0][0].transcript.toLowerCase();
+        if (command.includes("appointments")) {
+          alert("Showing appointments...");
+        }
+      };
+    }
+
+    socket.on("newAppointment", (appt) => {
+      const li = document.createElement("li");
+      li.id = `doc-appt-${appt.id}`;
+      li.className = "p-2 bg-gray-100 rounded flex justify-between items-center";
+      li.innerHTML = `
+        <span>${appt.patientName} - ${appt.dateTime} - ${appt.status}</span>
+        <div class="space-x-2">
+          <button onclick="updateAppointment(${appt.id}, 'approved')" class="bg-green-500 text-white px-2 py-1 rounded">Accept</button>
+          <button onclick="updateAppointment(${appt.id}, 'denied')" class="bg-red-500 text-white px-2 py-1 rounded">Deny</button>
+        </div>
+      `;
+      document.getElementById("doctorAppointments").appendChild(li);
+    });
+
+    function updateAppointment(id, status) {
+      socket.emit("updateAppointment", { id, status });
+      const li = document.getElementById(`doc-appt-${id}`);
+      if (li) li.querySelector("span").innerText = li.querySelector("span").innerText.replace("pending", status);
+    }
+  </script>
+</body>
+</html>

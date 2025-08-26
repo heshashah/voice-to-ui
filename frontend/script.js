@@ -136,8 +136,8 @@ function setupVoiceCommands() {
   };
 
   recognition.onresult = function (event) {
-    const command = event.results[0][0].transcript.toLowerCase();
-    console.log("Voice Command:", command);
+    let command = event.results[0][0].transcript.toLowerCase().trim();
+    console.log("Recognized:", command);
 
     if (command.includes("show my mood history")) {
       window.location.href = "/history.html";
@@ -151,6 +151,8 @@ function setupVoiceCommands() {
     } else if (command.includes("start breathing exercise")) {
       // You can parse duration from command if needed, default to 1
       startBreathingExercise(1);
+    } else if (command.includes("open appointment page")){
+      window.location.href = "/appointments.html";
     } else {
       alert("Command not recognized");
     }
@@ -192,3 +194,4 @@ window.addEventListener('load', () => {
     recognition.start();
   }
 });
+

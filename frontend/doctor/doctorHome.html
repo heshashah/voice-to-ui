@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -15,6 +16,7 @@
       align-items: center;
       height: 100vh;
     }
+
     .container {
       background-color: #FDF1D4;
       border-radius: 40px;
@@ -27,7 +29,24 @@
       align-items: center;
       padding: 1.5rem;
     }
-    .wave-top, .wave-bottom {
+
+    .logo {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+      margin-top: 4rem;
+    }
+
+    .logo h1 {
+      font-size: 3rem;
+      font-weight: bold;
+      letter-spacing: 2px;
+      color: #B16D50;
+      font-family: 'Courier New', Courier, monospace;
+    }
+
+    .wave-top,
+    .wave-bottom {
       position: absolute;
       width: 200%;
       height: 200px;
@@ -37,30 +56,48 @@
       animation: floatWave 6s ease-in-out infinite alternate;
       z-index: 0;
     }
-    .wave-top { top: -80px; left: -100px; transform: rotate(15deg); }
-    .wave-bottom { bottom: -100px; right: -100px; transform: rotate(-15deg); }
+
+    .wave-top {
+      top: -80px;
+      left: -100px;
+      transform: rotate(15deg);
+    }
+
+    .wave-bottom {
+      bottom: -100px;
+      right: -100px;
+      transform: rotate(-15deg);
+    }
+
     @keyframes floatWave {
-      0% { transform: translateY(0) rotate(15deg); }
-      100% { transform: translateY(-10px) rotate(15deg); }
+      0% {
+        transform: translateY(0) rotate(15deg);
+      }
+
+      100% {
+        transform: translateY(-10px) rotate(15deg);
+      }
     }
   </style>
 </head>
+
 <body>
   <div class="container">
     <div class="wave-top"></div>
     <div class="wave-bottom"></div>
 
-    <div class="logo relative z-10 text-center mt-6">
-      <h1 class="text-3xl font-bold text-orange-700">Doctor Dashboard</h1>
+    <div class="logo">
+      <h1 class="text-orange-500 font-semibold">Doctor Login</h1>
     </div>
 
-    <div class="relative z-10 mt-6 bg-white rounded-xl shadow-lg p-6 w-96 text-center">
-      <h2 id="welcomeMsg" class="text-2xl font-semibold text-gray-800">Hello</h2>
-      <p id="doctorDetails" class="text-gray-600 mt-2"></p>
-      <button onclick="logout()" class="mt-6 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded">
+    <div class="relative z-10 mt-6 bg-white rounded-xl shadow-lg p-6 w-96 text-center font-['Courier_New']">
+      <h2 id="welcomeMsg" class="text-2xl font-bold text-[#B16D50]">Hello</h2>
+      <p id="doctorDetails" class="mt-2 text-[#3F3F3F]"></p>
+      <button onclick="logout()" class="mt-6 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded font-bold">
         Logout
       </button>
     </div>
+
   </div>
 
   <script>
@@ -82,4 +119,5 @@
     }
   </script>
 </body>
+
 </html>

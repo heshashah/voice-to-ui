@@ -12,8 +12,46 @@ const bcrypt = require('bcrypt');
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
+const io = new Server(server, {
+  cors: {
+    origin: "*",
+  },
+});
 const PORT = process.env.PORT || 4000;
+
+//patient login
+async function loginPatient(event) {
+  event.preventDefault();
+  const name = document.getElementById("patientName").value;
+  const age = document.getElementById("patientAge").value;
+  const gender = document.querySelector('input[name="patientGender"]:checked')?.value;
+  const mobile = document.getElementById("patientMobile").value;
+
+  try {
+    // send details to backend
+    const res = await fetch("http://localhost:3000/api/patients/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, age, gender, mobile })
+    });
+
+    const data = await res.json();
+
+    if (res.ok) {
+      // store session info locally
+      sessionStorage.setItem("userRole", "patient");
+      sessionStorage.setItem("userName", name);
+
+      // redirect to home
+      window.location.href = "home.html";
+    } else {
+      alert("Login failed: " + data.message);
+    }
+  } catch (err) {
+    console.error("Error logging in:", err);
+    alert("Something went wrong!");
+  }
+}
 
 app.use(cors());
 app.use(express.json());
@@ -214,8 +252,8 @@ io.on('connection', (socket) => {
     if (cmd.includes('songs') || cmd.includes('music')) { socket.emit('execute-action', { type: 'REDIRECT', payload: { url: 'songs.html' } }); return; }
     if (cmd.includes('game') || cmd.includes('dino')) { socket.emit('execute-action', { type: 'REDIRECT', payload: { url: 'games/dino.html' } }); return; }
     if (cmd.includes('home')) { socket.emit('execute-action', { type: 'REDIRECT', payload: { url: 'home.html' } }); return; }
-    if (cmd.includes('mood history')) { socket.emit('execute-action', { type: 'REDIRECT', payload: { url: 'history.html' } }); return; }
-
+    if (cmd.includes('appointment bookings')) { socket.emit('execute-action', { type: 'REDIRECT', payload: { url: 'appointments.html' } }); return; }
+    if (cmd.includes('home')) { socket.emit('execute-action', { type: 'REDIRECT', payload: { url: 'home.html' } }); return; }
 
     // Medicine Tracker
     app.post('/api/add-medicine', async (req, res) => {
@@ -268,6 +306,24 @@ io.on('connection', (socket) => {
           type: 'MEDICINE_COMMAND',
           payload: { name: name.trim(), dosage: dosage || '', time: time.trim(), date }
         });
+
+        //Patient Login
+        app.post("/api/patients/login", async (req, res) => {
+  const { name, age, gender, mobile } = req.body;
+  const date = new Date();
+
+  try {
+    await db.query(
+      "INSERT INTO patients (name, age, gender, mobile, login_date) VALUES (?, ?, ?, ?, ?)",
+      [name, age, gender, mobile, date]
+    );
+    res.json({ message: "Patient logged in successfully" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Database error" });
+  }
+});
+
 
         // ✅ insert into DB
         db.query(
@@ -506,3 +562,67 @@ app.post('/api/add-medicine', (req, res) => {
       res.json({ success: true, message: 'Medicine added successfully' });
     });
 });
+
+//Appointments
+let appointments = []; // Optional cache
+
+io.on("connection", (socket) => {
+  console.log("⚡ User connected");
+
+  // Patient books appointment
+  socket.on("bookAppointment", ({ patientName, dateTime }) => {
+    db.query(
+      "INSERT INTO appointments (patientName, dateTime, status) VALUES (?, ?, 'pending')",
+      [patientName, dateTime],
+      (err, result) => {
+        if (err) {
+          console.error("❌ DB Error:", err);
+          socket.emit("feedback", { message: "❌ Failed to book appointment" });
+        } else {
+          const appointment = {
+            id: result.insertId,
+            patientName,
+            dateTime,
+            status: "pending",
+          };
+
+          // Keep in memory too (optional)
+          appointments.push(appointment);
+
+          // Send back to patient
+          socket.emit("appointmentBooked", appointment);
+
+          // Notify doctor(s)
+          io.emit("newAppointment", appointment);
+        }
+      }
+    );
+  });
+
+  // Doctor updates appointment
+  socket.on("updateAppointment", ({ id, status }) => {
+    db.query(
+      "UPDATE appointments SET status = ? WHERE id = ?",
+      [status, id],
+      (err) => {
+        if (err) {
+          console.error("❌ DB Error:", err);
+          return;
+        }
+
+        const appt = appointments.find((a) => a.id === id);
+        if (appt) appt.status = status;
+
+        io.emit("appointmentUpdated", { id, status });
+      }
+    );
+  });
+
+  socket.on("disconnect", () => {
+    console.log("❌ User disconnected");
+  });
+});
+
+// server.listen(3000, () => {
+//   console.log("🚀 Server running on http://localhost:3000");
+// });
