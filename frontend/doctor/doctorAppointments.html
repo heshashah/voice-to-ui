@@ -1,32 +1,250 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <title>Doctor Appointments</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+
+  <style>
+    body {
+      margin: 0;
+      background-color: #DDAF8C;
+      font-family: 'Segoe UI', sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    .container {
+      background-color: #FDF1D4;
+      border-radius: 40px;
+      width: 95%;
+      height: 95%;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .wave-top,
+    .wave-bottom {
+      position: absolute;
+      width: 200%;
+      height: 200px;
+      background: linear-gradient(to right, #FCD34D, #EBA85D, #FCD34D);
+      border-radius: 100%;
+      opacity: 0.7;
+      animation: floatWave 6s ease-in-out infinite alternate;
+      z-index: 0;
+    }
+
+    .wave-top {
+      top: -80px;
+      left: -100px;
+      transform: rotate(15deg);
+    }
+
+    .wave-bottom {
+      bottom: -100px;
+      right: -100px;
+      transform: rotate(-15deg);
+    }
+
+    @keyframes floatWave {
+      0% {
+        transform: translateY(0) rotate(15deg);
+      }
+
+      100% {
+        transform: translateY(-10px) rotate(15deg);
+      }
+    }
+
+    .logo {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+      margin-top: 4rem;
+    }
+
+    .logo h1 {
+      font-size: 3rem;
+      font-weight: bold;
+      letter-spacing: 2px;
+      color: #B16D50;
+      font-family: 'Courier New', Courier, monospace;
+    }
+
+    .navbar {
+      position: relative;
+      z-index: 2;
+      width: 100%;
+      display: flex;
+      justify-content: space-around;
+      padding: 1rem 0;
+      font-weight: bold;
+      color: #6B3E2E;
+    }
+
+    .navbar a {
+      text-decoration: none;
+      color: #6B3E2E;
+      padding: 0.5rem;
+      transition: color 0.3s ease;
+    }
+
+    .navbar a:hover {
+      color: #B16D50;
+    }
+
+    .appointments-box {
+      position: relative;
+      z-index: 1;
+      margin-top: 2rem;
+      background: white;
+      border-radius: 1rem;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+      padding: 2rem;
+      width: 28rem;
+      max-height: 60%;
+      overflow-y: auto;
+      font-family: 'Courier New', Courier, monospace;
+      font-weight: bold;
+    }
+
+    .mic-button.listening {
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+      }
+
+      70% {
+        box-shadow: 0 0 0 25px rgba(239, 68, 68, 0);
+      }
+    }
+
+    .mic-container {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+    }
+
+    .status-box {
+      background-color: rgba(0, 0, 0, 0.6);
+      color: white;
+      border-radius: 0.75rem;
+      padding: 1rem;
+      margin-bottom: 0.5rem;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .status-box.visible {
+      opacity: 1;
+    }
+
+    
+  </style>
 </head>
-<body class="bg-[#FDF1D4] font-['Courier_New'] flex items-center justify-center h-screen">
-  <div class="bg-white p-6 rounded-xl shadow-lg w-96">
-    <h2 class="text-2xl font-bold text-[#B16D50] mb-4">Patient Requests</h2>
-    <button onclick="startVoice()" class="mb-4 bg-[#E3C9AF] px-4 py-2 rounded">🎤 Speak</button>
-    <ul id="doctorAppointments" class="space-y-2"></ul>
+
+<body>
+  <div class="container">
+    <!-- Animated Background Waves -->
+    <div class="wave-top"></div>
+    <div class="wave-bottom"></div>
+
+    <!-- Navbar -->
+    <!-- <nav class="navbar">
+      <a href="doctorHome.html">Home</a>
+      <a href="../calendar.html">Calendar</a>
+      <a href="../settings.html">Settings</a>
+    </nav> -->
+
+    <!-- Logo -->
+    <div class="logo">
+      <h1 class="text-orange-500">Appointments📋</h1>
+    </div>
+
+    <!-- Appointments List -->
+    <div class="appointments-box">
+      <h2 class="text-2xl font-bold text-[#B16D50] mb-4">Patient Requests</h2>
+      <ul id="doctorAppointments" class="space-y-2"></ul>
+    </div>
+
+    <!-- Mic -->
+    <div class="mic-container">
+      <div id="status-display" class="status-box">
+        <p id="status" class="font-semibold">Listening...</p>
+        <p id="command-output" class="text-pink-400 text-sm mt-1">-</p>
+      </div>
+      <button id="mic-button"
+        class="mic-button bg-red-500 hover:bg-red-600 text-white w-16 h-16 rounded-full shadow-lg flex items-center justify-center">
+        <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
+          <path d="M7 4a3 3 0 016 0v6a3 3 0 11-6 0V4z" />
+        </svg>
+      </button>
+    </div>
   </div>
 
   <script>
     const socket = io("http://localhost:3000");
+    const micButton = document.getElementById('mic-button');
+    const statusBox = document.getElementById('status-display');
+    const status = document.getElementById('status');
+    const output = document.getElementById('command-output');
+    let recognition, isListening = false;
 
-    function startVoice() {
-      const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-      recognition.start();
+    // 🎤 Voice Recognition
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      recognition = new SpeechRecognition();
+      recognition.lang = 'en-US';
+      recognition.continuous = false;
+
+      recognition.onstart = () => {
+        isListening = true;
+        micButton.classList.add('listening');
+        statusBox.classList.add('visible');
+        status.textContent = 'Listening...';
+      };
+
+      recognition.onend = () => {
+        isListening = false;
+        micButton.classList.remove('listening');
+        statusBox.classList.remove('visible');
+      };
+
       recognition.onresult = (event) => {
         const command = event.results[0][0].transcript.toLowerCase();
+        output.textContent = `"${command}"`;
         if (command.includes("appointments")) {
           alert("Showing appointments...");
         }
       };
+
+      recognition.onerror = (e) => {
+        output.textContent = `Error: ${e.error}`;
+      };
     }
 
+    micButton.addEventListener('click', () => {
+      if (!recognition) return;
+      isListening ? recognition.stop() : recognition.start();
+    });
+
+    // 🗓️ New appointments listener
     socket.on("newAppointment", (appt) => {
       const li = document.createElement("li");
       li.id = `doc-appt-${appt.id}`;
@@ -48,4 +266,5 @@
     }
   </script>
 </body>
+
 </html>

@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Doctor Home</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
   <style>
     body {
       margin: 0;
@@ -78,6 +79,44 @@
         transform: translateY(-10px) rotate(15deg);
       }
     }
+
+    .mic-button.listening {
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+      }
+
+      70% {
+        box-shadow: 0 0 0 25px rgba(239, 68, 68, 0);
+      }
+    }
+
+    .mic-container {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+    }
+
+    .status-box {
+      background-color: rgba(0, 0, 0, 0.6);
+      color: white;
+      border-radius: 0.75rem;
+      padding: 1rem;
+      margin-bottom: 0.5rem;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .status-box.visible {
+      opacity: 1;
+    }
   </style>
 </head>
 
@@ -98,9 +137,23 @@
       </button>
     </div>
 
+    <!-- Mic -->
+    <div class="mic-container">
+      <div id="status-display" class="status-box">
+        <p id="status" class="font-semibold">Listening...</p>
+        <p id="command-output" class="text-pink-400 text-sm mt-1">-</p>
+      </div>
+      <button id="mic-button"
+        class="mic-button bg-red-500 hover:bg-red-600 text-white w-16 h-16 rounded-full shadow-lg flex items-center justify-center">
+        <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
+          <path d="M7 4a3 3 0 016 0v6a3 3 0 11-6 0V4z" />
+        </svg>
+      </button>
+    </div>
   </div>
 
   <script>
+    // ✅ Check role
     if (sessionStorage.getItem("userRole") !== "doctor") {
       window.location.href = "../index.html";
     } else {
@@ -117,6 +170,59 @@
       sessionStorage.clear();
       window.location.href = "../index.html";
     }
+
+    // ✅ Voice Recognition
+    const micButton = document.getElementById('mic-button');
+    const statusBox = document.getElementById('status-display');
+    const statusText = document.getElementById('status');
+    const output = document.getElementById('command-output');
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    let recognition, isListening = false;
+
+    if (SpeechRecognition) {
+      recognition = new SpeechRecognition();
+      recognition.lang = 'en-US';
+      recognition.continuous = false;
+
+      recognition.onstart = () => {
+        isListening = true;
+        micButton.classList.add('listening');
+        statusBox.classList.add('visible');
+        statusText.textContent = 'Listening...';
+      };
+
+      recognition.onend = () => {
+        isListening = false;
+        micButton.classList.remove('listening');
+        statusBox.classList.remove('visible');
+      };
+
+      recognition.onresult = (e) => {
+        const command = e.results[0][0].transcript.trim().toLowerCase();
+        output.textContent = `"${command}"`;
+
+        if (command.includes("go to appointments bookings")) {
+          window.location.href = "./doctorAppointments.html";
+        } else if (command.includes("go back")) {
+          window.history.back();
+        } else {
+          output.textContent = `Unknown command: "${command}"`;
+        }
+      };
+
+      recognition.onerror = (e) => {
+        output.textContent = `Error: ${e.error}`;
+      };
+    } else {
+      micButton.style.display = 'none';
+      alert('Speech Recognition not supported');
+    }
+
+    micButton.addEventListener('click', () => {
+      if (!recognition) return;
+      isListening ? recognition.stop() : recognition.start();
+    });
   </script>
 </body>
 

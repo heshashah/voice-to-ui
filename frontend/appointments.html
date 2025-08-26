@@ -240,6 +240,9 @@
         else if (command.includes("go settings")) {
           window.location.href = "settings.html";
         }
+        else if (command.includes("logout")){
+          window.location.href = "index.html";
+        }
         // 🔹 Other commands
         else {
           socket.emit("voiceCommand", { patientName, command });
