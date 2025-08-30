@@ -154,8 +154,6 @@
     .status-box.visible {
       opacity: 1;
     }
-
-    
   </style>
 </head>
 
@@ -227,10 +225,17 @@
       };
 
       recognition.onresult = (event) => {
-        const command = event.results[0][0].transcript.toLowerCase();
+        const command = event.results[0][0].transcript.toLowerCase().trim();
         output.textContent = `"${command}"`;
-        if (command.includes("appointments")) {
-          alert("Showing appointments...");
+
+        if (command.includes("go to appointments page")) {
+          window.location.href = "doctorAppointments.html";
+        }
+        else if (command.includes("go back")) {
+          window.history.back();
+        }
+        else {
+          output.textContent = `Unknown command: "${command}"`;
         }
       };
 
@@ -244,27 +249,54 @@
       isListening ? recognition.stop() : recognition.start();
     });
 
-    // 🗓️ New appointments listener
-    socket.on("newAppointment", (appt) => {
-      const li = document.createElement("li");
-      li.id = `doc-appt-${appt.id}`;
-      li.className = "p-2 bg-gray-100 rounded flex justify-between items-center";
-      li.innerHTML = `
+    // ⚡ Request all appointments on load
+    socket.emit("getAppointments");
+
+    // ⚡ Render full appointment list
+    socket.on("appointmentsList", (appointments) => {
+      const list = document.getElementById("doctorAppointments");
+      list.innerHTML = ""; // clear old
+      appointments.forEach(appt => {
+        const li = document.createElement("li");
+        li.id = `doc-appt-${appt.id}`;
+        li.className = "p-2 bg-gray-100 rounded flex justify-between items-center";
+        li.innerHTML = `
         <span>${appt.patientName} - ${appt.dateTime} - ${appt.status}</span>
         <div class="space-x-2">
           <button onclick="updateAppointment(${appt.id}, 'approved')" class="bg-green-500 text-white px-2 py-1 rounded">Accept</button>
           <button onclick="updateAppointment(${appt.id}, 'denied')" class="bg-red-500 text-white px-2 py-1 rounded">Deny</button>
         </div>
       `;
+        list.appendChild(li);
+      });
+    });
+
+    // 🗓️ Listen for *new* appointment (real-time)
+    socket.on("newAppointment", (appt) => {
+      const li = document.createElement("li");
+      li.id = `doc-appt-${appt.id}`;
+      li.className = "p-2 bg-gray-100 rounded flex justify-between items-center";
+      li.innerHTML = `
+      <span>${appt.patientName} - ${appt.dateTime} - ${appt.status}</span>
+      <div class="space-x-2">
+        <button onclick="updateAppointment(${appt.id}, 'approved')" class="bg-green-500 text-white px-2 py-1 rounded">Accept</button>
+        <button onclick="updateAppointment(${appt.id}, 'denied')" class="bg-red-500 text-white px-2 py-1 rounded">Deny</button>
+      </div>
+    `;
       document.getElementById("doctorAppointments").appendChild(li);
     });
 
+    // ⚡ Keep UI updated when doctor acts
     function updateAppointment(id, status) {
       socket.emit("updateAppointment", { id, status });
       const li = document.getElementById(`doc-appt-${id}`);
-      if (li) li.querySelector("span").innerText = li.querySelector("span").innerText.replace("pending", status);
+      if (li) {
+        const span = li.querySelector("span");
+        span.innerText = span.innerText.replace(/pending|approved|denied/, status);
+      }
     }
   </script>
+
 </body>
 
 </html>

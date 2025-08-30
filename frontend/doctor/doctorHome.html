@@ -202,14 +202,15 @@
         const command = e.results[0][0].transcript.trim().toLowerCase();
         output.textContent = `"${command}"`;
 
-        if (command.includes("go to appointments bookings")) {
-          window.location.href = "./doctorAppointments.html";
+        if (command.includes("go to appointments page") || command.includes("go to appointments")) {
+          window.location.href = "doctorAppointments.html";   // ✅ Correct path
         } else if (command.includes("go back")) {
           window.history.back();
         } else {
           output.textContent = `Unknown command: "${command}"`;
         }
       };
+
 
       recognition.onerror = (e) => {
         output.textContent = `Error: ${e.error}`;
