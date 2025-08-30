@@ -123,7 +123,7 @@ const monthMap = {
 
 function formatDateToDayDateYear(dateStr) {
   const dateObj = new Date(dateStr);
-  if (isNaN(dateObj)) return dateStr; 
+  if (isNaN(dateObj)) return dateStr;
   const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
   return dateObj.toLocaleDateString('en-US', options);
 }
@@ -177,31 +177,67 @@ io.on('connection', (socket) => {
     }
 
     // 📅 Add Event
+    function parseEventCommand(command) {
+      command = command.toLowerCase().trim();
+
+      const match = command.match(/mark (.+?) as (.+)/i);
+      if (match) {
+        const title = match[1].trim();
+        const status = match[2].trim();
+        const date = new Date().toISOString().split("T")[0];
+        return { title: `${title} (${status})`, date };
+      }
+
+      const regex = /mark (.+?) on (\d{4}-\d{2}-\d{2})/i;
+      const m2 = command.match(regex);
+      if (m2) {
+        return { title: m2[1].trim(), date: m2[2] };
+      }
+
+      return null;
+    }
+
+    // 📅 Add Event
     if (cmd.startsWith('mark')) {
       const event = parseEventCommand(cmd);
       if (event) {
-        db.query(`INSERT INTO calendar_events (title, date) VALUES (?, ?)`, [event.title, event.date], (err) => {
-          if (err) {
-            console.error('❌ DB Insert Error:', err);
-            socket.emit('feedback', { message: '❌ Failed to save event to DB' });
-            return;
+        db.query(
+          `INSERT INTO calendar_events (title, date) VALUES (?, ?)`,
+          [event.title, event.date],
+          (err) => {
+            if (err) {
+              console.error('❌ DB Insert Error:', err);
+              socket.emit('feedback', { message: '❌ Failed to save event to DB' });
+              return;
+            }
+
+            // ✅ Update frontend UI
+            socket.emit('execute-action', {
+              type: 'ADD_EVENT',
+              payload: event
+            });
+
+            // ✅ Notify user
+            socket.emit('feedback', {
+              message: `✅ Event "${event.title}" added on ${event.date}`
+            });
+
+            // 🔄 Re-sync all events to frontend
+            db.query(
+              `SELECT title, date FROM calendar_events ORDER BY date ASC`,
+              (err, rows) => {
+                if (!err) socket.emit('calendar-events', rows);
+              }
+            );
           }
-
-          // ✅ Notify frontend that the event was added
-          socket.emit('execute-action', { type: 'ADD_EVENT', payload: event });
-          socket.emit('feedback', { message: `✅ Event "${event.title}" added on ${event.date}` });
-
-          // ✅ Fetch all events again and send to frontend to keep it updated
-          db.query(`SELECT title, date FROM calendar_events ORDER BY date ASC`, (err, rows) => {
-            if (!err) socket.emit('calendar-events', rows);
-          });
-        });
+        );
       } else {
-        socket.emit('feedback', { message: `❌ Could not parse event: "${command}"` });
+        socket.emit('feedback', {
+          message: `❌ Could not parse event: "${command}"`
+        });
       }
       return;
     }
-
 
     // ❌ Clear Calendar Events
     if (cmd.startsWith('clear')) {
@@ -309,20 +345,20 @@ io.on('connection', (socket) => {
 
         //Patient Login
         app.post("/api/patients/login", async (req, res) => {
-  const { name, age, gender, mobile } = req.body;
-  const date = new Date();
+          const { name, age, gender, mobile } = req.body;
+          const date = new Date();
 
-  try {
-    await db.query(
-      "INSERT INTO patients (name, age, gender, mobile, login_date) VALUES (?, ?, ?, ?, ?)",
-      [name, age, gender, mobile, date]
-    );
-    res.json({ message: "Patient logged in successfully" });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Database error" });
-  }
-});
+          try {
+            await db.query(
+              "INSERT INTO patients (name, age, gender, mobile, login_date) VALUES (?, ?, ?, ?, ?)",
+              [name, age, gender, mobile, date]
+            );
+            res.json({ message: "Patient logged in successfully" });
+          } catch (err) {
+            console.error(err);
+            res.status(500).json({ message: "Database error" });
+          }
+        });
 
 
         // ✅ insert into DB
@@ -568,6 +604,17 @@ let appointments = []; // Optional cache
 
 io.on("connection", (socket) => {
   console.log("⚡ User connected");
+  // Doctor requests all appointments
+  socket.on("getAppointments", () => {
+    db.query("SELECT * FROM appointments ORDER BY dateTime ASC", (err, rows) => {
+      if (err) {
+        console.error("❌ DB Error:", err);
+        socket.emit("feedback", { message: "❌ Failed to fetch appointments" });
+      } else {
+        socket.emit("appointmentsList", rows);
+      }
+    });
+  });
 
   // Patient books appointment
   socket.on("bookAppointment", ({ patientName, dateTime }) => {
