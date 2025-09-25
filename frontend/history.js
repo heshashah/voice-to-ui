@@ -10,7 +10,7 @@ fetch('/api/moods')
     }
 
     moods.forEach((entry, index) => {
-      const formattedDate = new Date(entry.date).toLocaleString(); // ✅ Fixes "Invalid Date"
+      const formattedDate = new Date(entry.date).toLocaleString(); 
 
       const div = document.createElement('div');
       div.className = 'mood-entry';
@@ -83,9 +83,9 @@ function getSmartReply(msg) {
 }
 function speak(text) {
   const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = "en-US"; // ✅ Choose language
-  utterance.rate = 1;       // ✅ Speed (1 = normal)
-  utterance.pitch = 1;      // ✅ Voice pitch
+  utterance.lang = "en-US"; 
+  utterance.rate = 1;      
+  utterance.pitch = 1;      
   speechSynthesis.speak(utterance);
 }
 

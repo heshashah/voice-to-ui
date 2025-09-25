@@ -1,6 +1,6 @@
 // db.js
 const mysql = require('mysql2');
-require('dotenv').config(); // Load MySQL credentials from .env
+require('dotenv').config(); 
 
 // Create a connection pool
 const db = mysql.createPool({
@@ -35,7 +35,7 @@ db.query(`
   }
 });
 
-const date = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+const date = new Date().toISOString().split('T')[0]; 
 db.query(`INSERT INTO mood_logs (mood, date) VALUES (?, ?)`, [mood, date], (err) => {
     if (err) {
         console.error('❌ Error logging mood:', err);

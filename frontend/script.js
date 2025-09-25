@@ -10,9 +10,9 @@ let isListening = false;
 // Speak helper function
 function speak(text) {
   const utterance = new SpeechSynthesisUtterance(text);
-  utterance.rate = 1;  // speaking speed
-  utterance.pitch = 1; // pitch
-  utterance.volume = 1; // volume
+  utterance.rate = 1;  
+  utterance.pitch = 1; 
+  utterance.volume = 1; 
   speechSynthesis.speak(utterance);
 }
 
@@ -22,7 +22,6 @@ function getCookie(name) {
   return match ? match[2] : null;
 }
 
-// Helper: Set cookie
 function setCookie(name, value, maxAge = 86400) {
   document.cookie = `${name}=${value}; path=/; max-age=${maxAge}`;
 }
@@ -70,15 +69,13 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
   }
-
-  // Setup voice commands after DOM is ready
   setupVoiceCommands();
 });
 
 // Submit user data to mood entry or another page
 function submitUserData(userId) {
   console.log("User ID:", userId);
-  window.location.href = "/mood.html"; // redirect to main page after login
+  window.location.href = "/mood.html";
 }
 
 // Breathing exercise with customizable duration in minutes
@@ -86,11 +83,11 @@ function startBreathingExercise(durationMinutes = 1) {
   const phrases = [
     "Breathe in",
     "Breathe out",
-    "Think about positive things"
+    // "Think about positive things"
   ];
 
   let elapsed = 0;
-  const intervalMs = 4000; // 4 seconds per phrase
+  const intervalMs = 1000; 
   const totalPhrases = Math.ceil((durationMinutes * 60 * 1000) / intervalMs);
 
   speak(`Starting a ${durationMinutes} minute guided breathing exercise. Focus on your breath.`);

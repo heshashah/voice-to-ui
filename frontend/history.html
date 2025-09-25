@@ -413,7 +413,7 @@
       const reply = getBotReply(message);
       chatLog.innerHTML += `<p><strong>Bot:</strong> ${reply}</p>`;
 
-      speak(reply); // ✅ This makes the bot voice reply
+      speak(reply); // Voice Reply
 
       input.value = "";
       chatLog.scrollTop = chatLog.scrollHeight;

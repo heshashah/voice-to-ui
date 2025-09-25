@@ -190,10 +190,10 @@
       isListening ? recognition.stop() : recognition.start();
     });
 
-    // ⚡ Request all appointments on load
+    // Request all appointments on load
     socket.emit("getAppointments");
 
-    // ⚡ Render full appointment list
+    // Render full appointment list
     socket.on("appointmentsList", (appointments) => {
       const list = document.getElementById("doctorAppointments");
       list.innerHTML = "";
@@ -225,7 +225,7 @@
       document.getElementById("doctorAppointments").appendChild(li);
     });
 
-    // ⚡ Update appointment
+    // Update appointment
     function updateAppointment(id, status) {
       socket.emit("updateAppointment", { id, status });
       const li = document.getElementById(`doc-appt-${id}`);

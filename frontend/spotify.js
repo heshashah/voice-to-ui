@@ -6,12 +6,10 @@ const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecogni
 
 let token = null;
 
-// Spotify Auth Info
 const CLIENT_ID = 'd518b0e202c34573b6cb7abc354a5f66';  
 const REDIRECT_URI = 'https://8a5262ee343a.ngrok-free.app/callback.html'; 
 const SCOPES = 'streaming user-read-playback-state user-modify-playback-state user-read-currently-playing';
 
-// Generate Spotify Auth URL
 function loginWithSpotify() {
   const authUrl = `https://accounts.spotify.com/authorize?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=token&scope=${SCOPES}`;
   window.location.href = authUrl;
@@ -19,7 +17,6 @@ function loginWithSpotify() {
 
 loginBtn.onclick = loginWithSpotify;
 
-// On callback.html, extract token
 if (window.location.hash.includes('access_token')) {
   const hash = window.location.hash.substring(1);
   const params = new URLSearchParams(hash);
