@@ -7,7 +7,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
-
   <style>
     body {
       margin: 0;
@@ -18,7 +17,6 @@
       align-items: center;
       height: 100vh;
     }
-
     .container {
       background-color: #FDF1D4;
       border-radius: 40px;
@@ -30,9 +28,7 @@
       flex-direction: column;
       align-items: center;
     }
-
-    .wave-top,
-    .wave-bottom {
+    .wave-top, .wave-bottom {
       position: absolute;
       width: 200%;
       height: 200px;
@@ -42,36 +38,18 @@
       animation: floatWave 6s ease-in-out infinite alternate;
       z-index: 0;
     }
-
-    .wave-top {
-      top: -80px;
-      left: -100px;
-      transform: rotate(15deg);
-    }
-
-    .wave-bottom {
-      bottom: -100px;
-      right: -100px;
-      transform: rotate(-15deg);
-    }
-
+    .wave-top { top: -80px; left: -100px; transform: rotate(15deg); }
+    .wave-bottom { bottom: -100px; right: -100px; transform: rotate(-15deg); }
     @keyframes floatWave {
-      0% {
-        transform: translateY(0) rotate(15deg);
-      }
-
-      100% {
-        transform: translateY(-10px) rotate(15deg);
-      }
+      0% { transform: translateY(0) rotate(15deg); }
+      100% { transform: translateY(-10px) rotate(15deg); }
     }
-
     .logo {
       position: relative;
       z-index: 1;
       text-align: center;
       margin-top: 4rem;
     }
-
     .logo h1 {
       font-size: 3rem;
       font-weight: bold;
@@ -79,29 +57,6 @@
       color: #B16D50;
       font-family: 'Courier New', Courier, monospace;
     }
-
-    .navbar {
-      position: relative;
-      z-index: 2;
-      width: 100%;
-      display: flex;
-      justify-content: space-around;
-      padding: 1rem 0;
-      font-weight: bold;
-      color: #6B3E2E;
-    }
-
-    .navbar a {
-      text-decoration: none;
-      color: #6B3E2E;
-      padding: 0.5rem;
-      transition: color 0.3s ease;
-    }
-
-    .navbar a:hover {
-      color: #B16D50;
-    }
-
     .appointments-box {
       position: relative;
       z-index: 1;
@@ -116,21 +71,11 @@
       font-family: 'Courier New', Courier, monospace;
       font-weight: bold;
     }
-
-    .mic-button.listening {
-      animation: pulse 1.5s infinite;
-    }
-
+    .mic-button.listening { animation: pulse 1.5s infinite; }
     @keyframes pulse {
-      0% {
-        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
-      }
-
-      70% {
-        box-shadow: 0 0 0 25px rgba(239, 68, 68, 0);
-      }
+      0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+      70% { box-shadow: 0 0 0 25px rgba(239, 68, 68, 0); }
     }
-
     .mic-container {
       position: absolute;
       bottom: 20px;
@@ -140,7 +85,6 @@
       flex-direction: column;
       align-items: flex-end;
     }
-
     .status-box {
       background-color: rgba(0, 0, 0, 0.6);
       color: white;
@@ -150,25 +94,14 @@
       opacity: 0;
       transition: opacity 0.3s;
     }
-
-    .status-box.visible {
-      opacity: 1;
-    }
+    .status-box.visible { opacity: 1; }
   </style>
 </head>
 
 <body>
   <div class="container">
-    <!-- Animated Background Waves -->
     <div class="wave-top"></div>
     <div class="wave-bottom"></div>
-
-    <!-- Navbar -->
-    <!-- <nav class="navbar">
-      <a href="doctorHome.html">Home</a>
-      <a href="../calendar.html">Calendar</a>
-      <a href="../settings.html">Settings</a>
-    </nav> -->
 
     <!-- Logo -->
     <div class="logo">
@@ -200,7 +133,7 @@
     const socket = io("http://localhost:3000");
     const micButton = document.getElementById('mic-button');
     const statusBox = document.getElementById('status-display');
-    const status = document.getElementById('status');
+    const statusText = document.getElementById('status');
     const output = document.getElementById('command-output');
     let recognition, isListening = false;
 
@@ -215,7 +148,7 @@
         isListening = true;
         micButton.classList.add('listening');
         statusBox.classList.add('visible');
-        status.textContent = 'Listening...';
+        statusText.textContent = 'Listening...';
       };
 
       recognition.onend = () => {
@@ -228,11 +161,19 @@
         const command = event.results[0][0].transcript.toLowerCase().trim();
         output.textContent = `"${command}"`;
 
-        if (command.includes("go to appointments page")) {
-          window.location.href = "doctorAppointments.html";
+        if (command.includes("approve")) {
+          const id = parseInt(command.match(/\d+/)?.[0]); 
+          if (id) updateAppointment(id, "approved");
         }
-        else if (command.includes("go back")) {
-          window.history.back();
+        else if (command.includes("deny")) {
+          const id = parseInt(command.match(/\d+/)?.[0]); 
+          if (id) updateAppointment(id, "denied");
+        }
+        else if (command.includes("refresh")) {
+          socket.emit("getAppointments");
+        }
+        else if (command.includes("go home")) {
+          window.location.href = "doctorHome.html";
         }
         else {
           output.textContent = `Unknown command: "${command}"`;
@@ -255,38 +196,36 @@
     // ⚡ Render full appointment list
     socket.on("appointmentsList", (appointments) => {
       const list = document.getElementById("doctorAppointments");
-      list.innerHTML = ""; // clear old
+      list.innerHTML = "";
       appointments.forEach(appt => {
         const li = document.createElement("li");
         li.id = `doc-appt-${appt.id}`;
         li.className = "p-2 bg-gray-100 rounded flex justify-between items-center";
         li.innerHTML = `
-        <span>${appt.patientName} - ${appt.dateTime} - ${appt.status}</span>
-        <div class="space-x-2">
-          <button onclick="updateAppointment(${appt.id}, 'approved')" class="bg-green-500 text-white px-2 py-1 rounded">Accept</button>
-          <button onclick="updateAppointment(${appt.id}, 'denied')" class="bg-red-500 text-white px-2 py-1 rounded">Deny</button>
-        </div>
-      `;
+          <span>${appt.id}. ${appt.patientName} - ${appt.dateTime} - ${appt.status}</span>
+          <div class="space-x-2">
+            <button onclick="updateAppointment(${appt.id}, 'approved')" class="bg-green-500 text-white px-2 py-1 rounded">Accept</button>
+            <button onclick="updateAppointment(${appt.id}, 'denied')" class="bg-red-500 text-white px-2 py-1 rounded">Deny</button>
+          </div>`;
         list.appendChild(li);
       });
     });
 
-    // 🗓️ Listen for *new* appointment (real-time)
+    // 🗓️ Listen for new appointment
     socket.on("newAppointment", (appt) => {
       const li = document.createElement("li");
       li.id = `doc-appt-${appt.id}`;
       li.className = "p-2 bg-gray-100 rounded flex justify-between items-center";
       li.innerHTML = `
-      <span>${appt.patientName} - ${appt.dateTime} - ${appt.status}</span>
-      <div class="space-x-2">
-        <button onclick="updateAppointment(${appt.id}, 'approved')" class="bg-green-500 text-white px-2 py-1 rounded">Accept</button>
-        <button onclick="updateAppointment(${appt.id}, 'denied')" class="bg-red-500 text-white px-2 py-1 rounded">Deny</button>
-      </div>
-    `;
+        <span>${appt.id}. ${appt.patientName} - ${appt.dateTime} - ${appt.status}</span>
+        <div class="space-x-2">
+          <button onclick="updateAppointment(${appt.id}, 'approved')" class="bg-green-500 text-white px-2 py-1 rounded">Accept</button>
+          <button onclick="updateAppointment(${appt.id}, 'denied')" class="bg-red-500 text-white px-2 py-1 rounded">Deny</button>
+        </div>`;
       document.getElementById("doctorAppointments").appendChild(li);
     });
 
-    // ⚡ Keep UI updated when doctor acts
+    // ⚡ Update appointment
     function updateAppointment(id, status) {
       socket.emit("updateAppointment", { id, status });
       const li = document.getElementById(`doc-appt-${id}`);
@@ -296,7 +235,5 @@
       }
     }
   </script>
-
 </body>
-
 </html>

@@ -183,8 +183,8 @@
     if (SpeechRecognition) {
       recognition = new SpeechRecognition();
       recognition.lang = 'en-US';
-      recognition.continuous = false;
-
+      recognition.continuous = true;
+      
       recognition.onstart = () => {
         isListening = true;
         micButton.classList.add('listening');
@@ -200,17 +200,19 @@
 
       recognition.onresult = (e) => {
         const command = e.results[0][0].transcript.trim().toLowerCase();
+        console.log("Heard command:", command);
         output.textContent = `"${command}"`;
 
         if (command.includes("go to appointments page") || command.includes("go to appointments")) {
-          window.location.href = "doctorAppointments.html";   // ✅ Correct path
-        } else if (command.includes("go back")) {
+          window.location.href = "doctorAppointments.html";  
+        } 
+        else if (command.includes("go back")) {
           window.history.back();
-        } else {
+        } 
+        else {
           output.textContent = `Unknown command: "${command}"`;
         }
       };
-
 
       recognition.onerror = (e) => {
         output.textContent = `Error: ${e.error}`;

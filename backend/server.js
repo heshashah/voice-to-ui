@@ -569,7 +569,7 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'frontend', 'home.html'));
 });
 
-// 💊Medicine Tracker
+// 💊 Medicine Tracker
 server.listen(PORT, () => console.log(`🚀 Server running at http://localhost:${PORT}`));
 db.query(`
   CREATE TABLE IF NOT EXISTS medicines (
